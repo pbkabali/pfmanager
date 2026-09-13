@@ -1,0 +1,49 @@
+/*
+ * ============================================================
+ *  THE ONLY FILE YOU NEED TO EDIT TO REBRAND PFMANAGER
+ * ============================================================
+ *
+ * Raw colour values live here and nowhere else. Components never reference
+ * these directly -- they use the semantic roles in theme.css (surface, fg,
+ * accent, positive, negative, danger), which are derived from what you set
+ * below. Change a value here and both light and dark modes follow, with no
+ * component edits. Then run `npm run check:contrast`.
+ *
+ * Current identity: near-black ground, green accent. Money in is green,
+ * money out is red, and destructive actions share the red so it keeps
+ * meaning "careful".
+ */
+
+:root {
+  /* ---- Brand hues ---------------------------------------------------- */
+
+  /* Primary accent. Emphasis, active nav, primary buttons. Also "income". */
+  --brand-accent: #16a34a;
+  /* Darker cut of the accent, for accent-coloured TEXT on light backgrounds.
+     Full-strength green on white fails AA, so light mode reaches for this.
+     Tuned against the CARD surface, not just the page. */
+  --brand-accent-deep: #15803d;
+
+  /* Money out, and destructive actions. */
+  --brand-danger: #dc2626;
+  --brand-danger-deep: #b91c1c;
+  /* Lighter red for red TEXT on dark surfaces, where the deep cut is too dim. */
+  --brand-danger-light: #f87171;
+
+  /* ---- Neutral ramp -------------------------------------------------- */
+  /* 0 is the darkest ink, 1000 the lightest paper. Light and dark modes read
+     this same ramp from opposite ends, which is why one ramp serves both. */
+
+  --neutral-0: #0b0b0c;
+  --neutral-50: #17181b;
+  --neutral-100: #232529;
+  --neutral-200: #34373d;
+  --neutral-300: #4b4f57;
+  --neutral-400: #71757e;
+  --neutral-500: #9598a1;
+  --neutral-600: #b8bac1;
+  --neutral-700: #d4d6da;
+  --neutral-800: #e7e8ea;
+  --neutral-900: #f4f4f5;
+  --neutral-1000: #ffffff;
+}

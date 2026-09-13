@@ -1,0 +1,62 @@
+rules_version = '2';
+
+/*
+ * Private by construction.
+ *
+ * Everything a person owns lives under users/{uid}. Scoping by path -- not by
+ * an ownerId field -- means a query physically cannot return another person's
+ * transactions, and the rule is a single uid comparison rather than a filter
+ * every query and every rule has to remember.
+ *
+ * There is no admin role and no shared data: this is a personal tool. If a
+ * household/shared-ledger feature arrives, it gets its own top-level
+ * collection and its own rules, rather than loosening these.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    /* Amounts are stored as integers in the currency's minor unit (cents,
+       or whole shillings for UGX). Rejecting anything else at the boundary
+       keeps a float from ever reaching the ledger. */
+    function hasIntegerAmount() {
+      return request.resource.data.amountMinor is int;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      // Created on first sign-in by the client, never by anyone else.
+      allow create, update: if isOwner(uid);
+      // Deleting an account is a deliberate, server-side job (it has to
+      // cascade), so the client may not do it.
+      allow delete: if false;
+
+      match /accounts/{accountId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /categories/{categoryId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /transactions/{transactionId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && hasIntegerAmount();
+      }
+
+      match /budgets/{budgetId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && hasIntegerAmount();
+      }
+    }
+
+    // Anything not matched above is denied. Adding a collection means adding a
+    // rule for it deliberately, rather than inheriting access by accident.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
