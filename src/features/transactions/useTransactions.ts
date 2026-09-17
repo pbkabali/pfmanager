@@ -11,6 +11,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
   type QueryConstraint,
 } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
@@ -109,6 +110,31 @@ export function createTransaction(uid: string, input: TransactionInput) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+}
+
+/**
+ * One income, landing in several accounts: one transaction per part, written
+ * as a single batch so a person never sees half a salary. All parts share a
+ * generated groupId plus the date, category and note; each carries its own
+ * account, currency and amount. A single-part income goes through here too
+ * and simply gets no groupId.
+ */
+export function createIncome(
+  uid: string,
+  shared: Pick<TransactionInput, 'categoryId' | 'date' | 'note'>,
+  parts: { accountId: string; currency: string; amountMinor: number }[],
+) {
+  const col = collection(db, userPath(uid, userCollections.transactions))
+  const groupId = parts.length > 1 ? doc(col).id : undefined
+  const batch = writeBatch(db)
+  for (const part of parts) {
+    batch.set(doc(col), {
+      ...clean({ type: 'income' as const, ...shared, ...part, groupId }),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  }
+  return batch.commit()
 }
 
 export function updateTransaction(uid: string, id: string, input: Partial<TransactionInput>) {

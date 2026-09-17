@@ -26,6 +26,12 @@ service cloud.firestore {
       return request.resource.data.amountMinor is int;
     }
 
+    /* Cross-currency transfers carry a second amount for the receiving side. */
+    function hasIntegerToAmount() {
+      return !('toAmountMinor' in request.resource.data)
+        || request.resource.data.toAmountMinor is int;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       // Created on first sign-in by the client, never by anyone else.
@@ -44,7 +50,7 @@ service cloud.firestore {
 
       match /transactions/{transactionId} {
         allow read, delete: if isOwner(uid);
-        allow create, update: if isOwner(uid) && hasIntegerAmount();
+        allow create, update: if isOwner(uid) && hasIntegerAmount() && hasIntegerToAmount();
       }
 
       match /budgets/{budgetId} {

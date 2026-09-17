@@ -1,5 +1,6 @@
 import { Money } from '../../components/Money'
 import type { Account } from '../accounts/types'
+import { accountCurrency } from '../accounts/types'
 import type { Category } from '../categories/types'
 import type { Transaction } from './types'
 
@@ -12,6 +13,7 @@ export function TransactionRow({
   onDelete,
 }: {
   transaction: Transaction
+  /** Profile currency: the fallback for rows and accounts written before currencies were per-account. */
   currency: string
   category?: Category
   account?: Account
@@ -19,6 +21,7 @@ export function TransactionRow({
   onDelete?: () => void
 }) {
   const t = transaction
+  const rowCurrency = t.currency ?? accountCurrency(account, currency)
   const title =
     t.type === 'transfer'
       ? `${account?.name ?? '?'} → ${toAccount?.name ?? '?'}`
@@ -28,6 +31,15 @@ export function TransactionRow({
   // Pending server ack: createdAt is still null. Shown subtly so a person
   // knows the row has not left the device yet.
   const pending = t.createdAt === null
+  // A transfer that changed currency shows both sides, since neither number
+  // alone says what happened.
+  const landed =
+    t.type === 'transfer' && t.toAmountMinor !== undefined ? (
+      <>
+        {' → '}
+        <Money amountMinor={t.toAmountMinor} currency={accountCurrency(toAccount, currency)} />
+      </>
+    ) : null
 
   return (
     <li className="flex items-center gap-3 py-3">
@@ -39,11 +51,15 @@ export function TransactionRow({
         <p className="truncate text-xs text-fg-subtle">
           {t.date.toDate().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
           {t.type !== 'transfer' && account && ` · ${account.name}`}
+          {t.groupId && ' · part of a split'}
           {t.note && ` · ${t.note}`}
           {pending && ' · not yet synced'}
         </p>
       </div>
-      <Money amountMinor={t.amountMinor} currency={currency} direction={direction} className="text-sm font-semibold" />
+      <span className="text-sm font-semibold">
+        <Money amountMinor={t.amountMinor} currency={rowCurrency} direction={direction} />
+        {landed}
+      </span>
       {onDelete && (
         <button
           type="button"

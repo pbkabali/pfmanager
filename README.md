@@ -75,11 +75,13 @@ src/
 Everything a person owns lives under `users/{uid}`:
 
 ```
-users/{uid}                     profile: currency, displayName, schemaVersion
-users/{uid}/accounts/{id}       name, type, openingBalanceMinor, archived
+users/{uid}                     profile: currency (default for new accounts),
+                                displayName, schemaVersion
+users/{uid}/accounts/{id}       name, type, currency, openingBalanceMinor, archived
 users/{uid}/categories/{id}     name, kind (income|expense), icon, sortOrder
-users/{uid}/transactions/{id}   type, amountMinor, accountId, toAccountId?,
-                                categoryId?, date, note, createdAt, updatedAt
+users/{uid}/transactions/{id}   type, amountMinor, currency, accountId,
+                                toAccountId?, toAmountMinor?, categoryId?,
+                                groupId?, date, note, createdAt, updatedAt
 users/{uid}/budgets/{id}        (rules written, feature not yet built)
 ```
 
@@ -92,6 +94,22 @@ and every rule remembering to filter.
 unit: cents for USD, whole shillings for UGX. Floats never touch the ledger.
 The rules refuse a non-integer amount at the boundary. Conversion to and from
 decimals happens in `src/lib/money.ts` and nowhere else.
+
+**Why currency lives on the account.** A USD savings account and a UGX
+mobile money wallet hold different things, so each account has one fixed
+currency and every amount that touches it is in that currency. Totals are
+shown per currency and never added across currencies; there is no reporting
+currency and no exchange-rate table. A transfer between accounts of
+different currencies records both sides (`amountMinor` out, `toAmountMinor`
+in), which is exactly what the bank did. Every transaction also copies its
+account's `currency` so a row renders correctly on its own.
+
+**Why a split income is several transactions.** A salary that lands partly
+in a bank account and partly in mobile money is recorded once in the form
+but stored as one income transaction per destination, each in its account's
+currency, sharing a `groupId`. Balances, filters and per-currency totals then
+need no special case, and the batch write means a person never sees half a
+salary.
 
 **Why balances are derived.** An account's balance is its opening balance plus
 every movement, computed on the device. Storing a running balance would mean
@@ -166,7 +184,8 @@ in production.
 - Recurring transactions (needs Cloud Functions, therefore Blaze).
 - Edit a transaction in place; today it is delete and re-add.
 - Receipt photos (needs Storage, therefore Blaze).
-- Multi-currency accounts. Today one profile currency covers everything.
+- Exchange rates and a reporting currency, if a single "net worth" figure is
+  ever wanted. Today totals are per currency on purpose.
 - Export to CSV.
 - Test suite. None yet, same as racewire.
 
