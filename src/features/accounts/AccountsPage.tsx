@@ -5,8 +5,10 @@ import { Money } from '../../components/Money'
 import { PageHeader } from '../../components/PageHeader'
 import { parseAmount } from '../../lib/money'
 import { useProfile } from '../profile/profileContext'
+import { CURRENCIES } from '../profile/types'
 import { useTransactions } from '../transactions/useTransactions'
-import { ACCOUNT_TYPES, type AccountType } from './types'
+import { computeBalances, totalsByCurrency } from './balances'
+import { ACCOUNT_TYPES, accountCurrency, type AccountType } from './types'
 import { createAccount, setAccountArchived, useAccounts } from './useAccounts'
 
 const field = 'mt-1 w-full rounded-md border border-edge bg-bg px-3 py-2 text-fg'
@@ -14,28 +16,18 @@ const label = 'text-xs font-semibold tracking-wide text-fg-muted uppercase'
 
 export function AccountsPage() {
   const user = useUser()
-  const { currency } = useProfile()
+  const { currency: profileCurrency } = useProfile()
   const { accounts, loading } = useAccounts()
-  // Balances are derived, never stored: opening balance plus every movement.
-  // Storing them would mean keeping two things in sync on every write, and
-  // offline writes make that genuinely hard to get right.
   const { transactions } = useTransactions({ max: 10000 })
   const [adding, setAdding] = useState(false)
 
-  const balances = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const a of accounts) map.set(a.id, a.openingBalanceMinor)
-    for (const t of transactions) {
-      const sign = t.type === 'income' ? 1 : -1
-      map.set(t.accountId, (map.get(t.accountId) ?? 0) + sign * t.amountMinor)
-      if (t.type === 'transfer' && t.toAccountId) {
-        map.set(t.toAccountId, (map.get(t.toAccountId) ?? 0) + t.amountMinor)
-      }
-    }
-    return map
-  }, [accounts, transactions])
-
-  const total = accounts.filter((a) => !a.archived).reduce((sum, a) => sum + (balances.get(a.id) ?? 0), 0)
+  const balances = useMemo(() => computeBalances(accounts, transactions), [accounts, transactions])
+  // One total per currency. Adding a USD balance to a UGX balance would be a
+  // number that means nothing, so the page never does it.
+  const totals = useMemo(
+    () => totalsByCurrency(accounts, balances, profileCurrency),
+    [accounts, balances, profileCurrency],
+  )
 
   return (
     <>
@@ -53,11 +45,15 @@ export function AccountsPage() {
         }
       />
 
-      {adding && <NewAccountForm currency={currency} onSaved={() => setAdding(false)} />}
+      {adding && <NewAccountForm defaultCurrency={profileCurrency} onSaved={() => setAdding(false)} />}
 
-      <div className="mb-4 rounded-lg border border-edge bg-surface p-4">
-        <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total</p>
-        <Money amountMinor={total} currency={currency} className="text-2xl font-bold text-fg" />
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {(totals.length ? totals : [{ currency: profileCurrency, totalMinor: 0 }]).map((t) => (
+          <div key={t.currency} className="rounded-lg border border-edge bg-surface p-4">
+            <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total · {t.currency}</p>
+            <Money amountMinor={t.totalMinor} currency={t.currency} className="text-2xl font-bold text-fg" />
+          </div>
+        ))}
       </div>
 
       {loading ? (
@@ -66,6 +62,7 @@ export function AccountsPage() {
         <ul className="divide-y divide-edge rounded-lg border border-edge bg-surface px-4">
           {accounts.map((a) => {
             const meta = ACCOUNT_TYPES.find((t) => t.value === a.type)
+            const currency = accountCurrency(a, profileCurrency)
             return (
               <li key={a.id} className={`flex items-center gap-3 py-3 ${a.archived ? 'opacity-50' : ''}`}>
                 <span aria-hidden className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-surface-raised text-lg">
@@ -74,7 +71,7 @@ export function AccountsPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-fg">{a.name}</p>
                   <p className="text-xs text-fg-subtle">
-                    {meta?.label ?? a.type}
+                    {meta?.label ?? a.type} · {currency}
                     {a.archived && ' · archived'}
                   </p>
                 </div>
@@ -95,12 +92,18 @@ export function AccountsPage() {
   )
 }
 
-function NewAccountForm({ currency, onSaved }: { currency: string; onSaved: () => void }) {
+function NewAccountForm({ defaultCurrency, onSaved }: { defaultCurrency: string; onSaved: () => void }) {
   const user = useUser()
   const [name, setName] = useState('')
   const [type, setType] = useState<AccountType>('mobile_money')
+  const [currency, setCurrency] = useState(defaultCurrency)
   const [opening, setOpening] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  // Offer the profile's currency even if it is not in the fixed list.
+  const currencyOptions = CURRENCIES.includes(defaultCurrency as (typeof CURRENCIES)[number])
+    ? CURRENCIES
+    : [defaultCurrency, ...CURRENCIES]
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -113,7 +116,7 @@ function NewAccountForm({ currency, onSaved }: { currency: string; onSaved: () =
       setError('Give the account a name.')
       return
     }
-    void createAccount(user.uid, { name: name.trim(), type, openingBalanceMinor })
+    void createAccount(user.uid, { name: name.trim(), type, currency, openingBalanceMinor })
     onSaved()
   }
 
@@ -131,13 +134,23 @@ function NewAccountForm({ currency, onSaved }: { currency: string; onSaved: () =
           className={field}
         />
       </label>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <label className="block">
           <span className={label}>Type</span>
           <select value={type} onChange={(e) => setType(e.target.value as AccountType)} className={field}>
             {ACCOUNT_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.icon} {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className={label}>Currency</span>
+          <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={field}>
+            {currencyOptions.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </select>
@@ -154,6 +167,9 @@ function NewAccountForm({ currency, onSaved }: { currency: string; onSaved: () =
           />
         </label>
       </div>
+      <p className="text-xs text-fg-subtle">
+        The currency is fixed once the account exists. Money changes currency by moving between accounts.
+      </p>
       {error && (
         <p role="alert" className="text-sm text-danger-text">
           {error}

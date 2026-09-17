@@ -27,7 +27,7 @@ export function SettingsPage() {
 
         <section className="rounded-lg border border-edge bg-surface p-4">
           <label className="block">
-            <span className={label}>Currency</span>
+            <span className={label}>Default currency</span>
             <select
               value={profile.currency}
               onChange={(e) => void updateDoc(doc(db, userDocPath(user.uid)), { currency: e.target.value })}
@@ -41,7 +41,8 @@ export function SettingsPage() {
             </select>
           </label>
           <p className="mt-2 text-xs text-fg-subtle">
-            Changes how amounts are shown. Existing amounts are not converted.
+            New expenses are recorded in this currency unless you change it on the form. Also the default for
+            new accounts and shown first in summaries. Nothing is converted.
           </p>
         </section>
 

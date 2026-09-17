@@ -26,6 +26,16 @@ service cloud.firestore {
       return request.resource.data.amountMinor is int;
     }
 
+    /* Cross-currency rows carry a second amount: what the other side saw.
+       Transfers use toAmountMinor (received), expenses accountAmountMinor
+       (charged to the account). Either is optional but must be an integer. */
+    function hasIntegerSecondaryAmounts() {
+      return (!('toAmountMinor' in request.resource.data)
+          || request.resource.data.toAmountMinor is int)
+        && (!('accountAmountMinor' in request.resource.data)
+          || request.resource.data.accountAmountMinor is int);
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       // Created on first sign-in by the client, never by anyone else.
@@ -44,7 +54,7 @@ service cloud.firestore {
 
       match /transactions/{transactionId} {
         allow read, delete: if isOwner(uid);
-        allow create, update: if isOwner(uid) && hasIntegerAmount();
+        allow create, update: if isOwner(uid) && hasIntegerAmount() && hasIntegerSecondaryAmounts();
       }
 
       match /budgets/{budgetId} {

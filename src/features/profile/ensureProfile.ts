@@ -31,6 +31,7 @@ export async function seedProfile(user: User): Promise<void> {
   batch.set(doc(db, userPath(user.uid, userCollections.accounts), DEFAULT_ACCOUNT_ID), {
     name: 'Cash',
     type: 'cash',
+    currency: DEFAULT_CURRENCY,
     openingBalanceMinor: 0,
     archived: false,
     createdAt: serverTimestamp(),

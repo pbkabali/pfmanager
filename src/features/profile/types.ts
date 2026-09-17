@@ -7,7 +7,12 @@ import type { Timestamp } from 'firebase/firestore'
  * subcollections so this document stays cheap to listen to.
  */
 export type Profile = {
-  /** ISO 4217 code every amount in the ledger is denominated in. */
+  /**
+   * ISO 4217 code new expenses are recorded in unless changed on the form,
+   * the default for new accounts, and the first shown in per-currency
+   * summaries. Each account carries its own currency; this is not a
+   * reporting currency and nothing is converted into it.
+   */
   currency: string
   displayName: string | null
   createdAt: Timestamp | null

@@ -64,7 +64,7 @@ export function useAccounts(): AccountsState {
 
 export function createAccount(
   uid: string,
-  input: { name: string; type: AccountType; openingBalanceMinor: number },
+  input: { name: string; type: AccountType; currency: string; openingBalanceMinor: number },
 ) {
   return addDoc(collection(db, userPath(uid, userCollections.accounts)), {
     ...input,
