@@ -8,6 +8,7 @@ import { accountCurrency, type Account } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
 import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
+import { CURRENCIES } from '../profile/types'
 import { fromDateInputValue, toDateInputValue } from './periods'
 import type { TransactionType } from './types'
 import { createIncome, createTransaction } from './useTransactions'
@@ -34,9 +35,12 @@ function newPart(accountId = ''): Part {
  * first and focused, type as three big toggles, sensible defaults for the
  * rest so most entries are amount + category + save.
  *
- * Every amount is typed in the currency of the account it touches. An income
- * can be split across several accounts, each part in that account's currency;
- * a transfer between accounts of different currencies asks for both sides.
+ * Incomes and transfers are typed in the currency of the account they touch.
+ * An expense is typed in the currency it was priced in -- the profile's
+ * default unless changed -- and when that differs from the paying account's
+ * currency the form also asks what the account was charged. An income can be
+ * split across several accounts, each part in that account's currency; a
+ * transfer between accounts of different currencies asks for both sides.
  * No exchange rates: the numbers recorded are the numbers that happened.
  */
 export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
@@ -48,6 +52,8 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
 
   const [type, setType] = useState<TransactionType>('expense')
   const [amount, setAmount] = useState('')
+  const [expenseCurrency, setExpenseCurrency] = useState(profileCurrency)
+  const [accountAmount, setAccountAmount] = useState('')
   const [accountId, setAccountId] = useState('')
   const [toAccountId, setToAccountId] = useState('')
   const [toAmount, setToAmount] = useState('')
@@ -66,12 +72,27 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
     )
 
   // Fall back to the first option so an untouched select still submits a value.
-  const account = accountId || accounts[0]?.id || ''
+  // For an expense, prefer an account in the expense's currency: paying a UGX
+  // bill from the UGX wallet is the common case and should need no extra field.
+  const preferredAccount =
+    type === 'expense' ? accounts.find((a) => accountCurrency(a, profileCurrency) === expenseCurrency) : undefined
+  const account = accountId || preferredAccount?.id || accounts[0]?.id || ''
   const toAccount = toAccountId || accounts.find((a) => a.id !== account)?.id || ''
   const category = categoryOptions.some((c) => c.id === categoryId)
     ? categoryId
     : (categoryOptions[0]?.id ?? '')
   const crossCurrency = type === 'transfer' && !!toAccount && currencyOf(account) !== currencyOf(toAccount)
+  const chargedInOtherCurrency = type === 'expense' && !!account && currencyOf(account) !== expenseCurrency
+
+  // Currencies offered for an expense: the profile default first, then any an
+  // account uses, then the standard list. Whatever the price tag said.
+  const expenseCurrencies = [
+    ...new Set([
+      profileCurrency,
+      ...accounts.map((a) => accountCurrency(a, profileCurrency)),
+      ...CURRENCIES,
+    ]),
+  ]
 
   // Each part defaults to the first account not already used by an earlier part.
   const resolvedParts = parts.map((p, i) => {
@@ -88,6 +109,7 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
   function reset() {
     setAmount('')
     setToAmount('')
+    setAccountAmount('')
     setNote('')
     setParts([newPart()])
   }
@@ -136,7 +158,7 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
       return
     }
 
-    const currency = currencyOf(account)
+    const currency = type === 'expense' ? expenseCurrency : currencyOf(account)
     const amountMinor = parseAmount(amount, currency)
     if (amountMinor === null || amountMinor <= 0) return fail('Enter an amount greater than zero.')
 
@@ -161,11 +183,20 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
         note: note.trim(),
       }).catch(report)
     } else {
+      let accountAmountMinor: number | undefined
+      if (chargedInOtherCurrency) {
+        const charged = parseAmount(accountAmount, currencyOf(account))
+        if (charged === null || charged <= 0) {
+          return fail(`Enter what the account was charged in ${currencyOf(account)}.`)
+        }
+        accountAmountMinor = charged
+      }
       createTransaction(user.uid, {
         type,
         amountMinor,
         currency,
         accountId: account,
+        accountAmountMinor,
         categoryId: category,
         date: when,
         note: note.trim(),
@@ -207,6 +238,37 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
           onAdd={() => setParts((ps) => [...ps, newPart()])}
           onRemove={(key) => setParts((ps) => (ps.length > 1 ? ps.filter((p) => p.key !== key) : ps))}
         />
+      ) : type === 'expense' ? (
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <label className="block">
+            <span className={label}>Amount</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              autoFocus
+              required
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={`${field} tabular text-2xl font-bold`}
+            />
+          </label>
+          <label className="block">
+            <span className={label}>Currency</span>
+            <select
+              value={expenseCurrency}
+              onChange={(e) => setExpenseCurrency(e.target.value)}
+              aria-label="Currency the expense was priced in"
+              className={`${field} text-2xl font-bold`}
+            >
+              {expenseCurrencies.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       ) : (
         <label className="block">
           <span className={label}>Amount ({currencyOf(account)})</span>
@@ -270,16 +332,35 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
             )}
           </>
         ) : (
-          <label className="block">
-            <span className={label}>Category</span>
-            <select value={category} onChange={(e) => setCategoryId(e.target.value)} className={field}>
-              {categoryOptions.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.icon} {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <>
+            <label className="block">
+              <span className={label}>Category</span>
+              <select value={category} onChange={(e) => setCategoryId(e.target.value)} className={field}>
+                {categoryOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {chargedInOtherCurrency && (
+              <label className="block sm:col-span-2">
+                <span className={label}>Charged to account as ({currencyOf(account)})</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  placeholder="0"
+                  value={accountAmount}
+                  onChange={(e) => setAccountAmount(e.target.value)}
+                  className={`${field} tabular`}
+                />
+                <span className="mt-1 block text-xs text-fg-subtle">
+                  The account uses a different currency. Enter what it was actually debited.
+                </span>
+              </label>
+            )}
+          </>
         )}
 
         <label className="block">

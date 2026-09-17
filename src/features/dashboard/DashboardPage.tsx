@@ -27,6 +27,8 @@ type CurrencySummary = {
  *
  * Everything is grouped by currency. There is no reporting currency and no
  * conversion: UGX received and USD received are two facts, shown as two.
+ * An expense counts in the currency it was priced in, not the currency of
+ * the account that paid, so "Spent · USD" is what was bought in dollars.
  * Charts land here next -- the by-category breakdown below is their data.
  */
 export function DashboardPage() {

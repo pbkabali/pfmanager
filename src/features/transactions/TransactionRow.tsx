@@ -51,6 +51,12 @@ export function TransactionRow({
         <p className="truncate text-xs text-fg-subtle">
           {t.date.toDate().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
           {t.type !== 'transfer' && account && ` · ${account.name}`}
+          {t.type === 'expense' && t.accountAmountMinor !== undefined && (
+            <>
+              {' · charged '}
+              <Money amountMinor={t.accountAmountMinor} currency={accountCurrency(account, currency)} />
+            </>
+          )}
           {t.groupId && ' · part of a split'}
           {t.note && ` · ${t.note}`}
           {pending && ' · not yet synced'}

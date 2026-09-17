@@ -80,8 +80,9 @@ users/{uid}                     profile: currency (default for new accounts),
 users/{uid}/accounts/{id}       name, type, currency, openingBalanceMinor, archived
 users/{uid}/categories/{id}     name, kind (income|expense), icon, sortOrder
 users/{uid}/transactions/{id}   type, amountMinor, currency, accountId,
-                                toAccountId?, toAmountMinor?, categoryId?,
-                                groupId?, date, note, createdAt, updatedAt
+                                accountAmountMinor?, toAccountId?, toAmountMinor?,
+                                categoryId?, groupId?, date, note, createdAt,
+                                updatedAt
 users/{uid}/budgets/{id}        (rules written, feature not yet built)
 ```
 
@@ -103,6 +104,14 @@ currency and no exchange-rate table. A transfer between accounts of
 different currencies records both sides (`amountMinor` out, `toAmountMinor`
 in), which is exactly what the bank did. Every transaction also copies its
 account's `currency` so a row renders correctly on its own.
+
+**Why an expense has its own currency.** Spending is recorded in the currency
+it was priced in, defaulting to the profile currency and changeable per
+entry, because that is the figure a person remembers and budgets against. A
+USD subscription paid from a UGX wallet is a USD expense with
+`accountAmountMinor` holding what the wallet was actually debited; balances
+use that, spending reports use the price. Incomes and transfers are always in
+their account's currency since they have no separate price.
 
 **Why a split income is several transactions.** A salary that lands partly
 in a bank account and partly in mobile money is recorded once in the form

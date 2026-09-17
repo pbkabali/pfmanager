@@ -8,9 +8,10 @@ import type { Timestamp } from 'firebase/firestore'
  */
 export type Profile = {
   /**
-   * ISO 4217 code used as the default for new accounts and shown first in
-   * per-currency summaries. Each account carries its own currency; this is
-   * not a reporting currency and nothing is converted into it.
+   * ISO 4217 code new expenses are recorded in unless changed on the form,
+   * the default for new accounts, and the first shown in per-currency
+   * summaries. Each account carries its own currency; this is not a
+   * reporting currency and nothing is converted into it.
    */
   currency: string
   displayName: string | null

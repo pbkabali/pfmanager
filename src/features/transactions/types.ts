@@ -24,6 +24,13 @@ export type Transaction = {
    * is stored: the two amounts are what actually happened.
    */
   toAmountMinor?: number
+  /**
+   * Expenses paid in a currency other than the account's: what actually left
+   * `accountId`, in that account's minor units. `amountMinor`/`currency` stay
+   * the price as paid (a USD subscription is a USD expense even when a UGX
+   * wallet settled it). Absent when the expense is in the account's currency.
+   */
+  accountAmountMinor?: number
   /** Absent on transfers, which are neither income nor spending. */
   categoryId?: string
   /**

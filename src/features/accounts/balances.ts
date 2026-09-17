@@ -15,7 +15,10 @@ export function computeBalances(accounts: Account[], transactions: Transaction[]
   for (const a of accounts) map.set(a.id, a.openingBalanceMinor)
   for (const t of transactions) {
     const sign = t.type === 'income' ? 1 : -1
-    map.set(t.accountId, (map.get(t.accountId) ?? 0) + sign * t.amountMinor)
+    // An expense priced in another currency debits the account by what was
+    // actually charged, not by the price tag.
+    const moved = t.type === 'expense' ? (t.accountAmountMinor ?? t.amountMinor) : t.amountMinor
+    map.set(t.accountId, (map.get(t.accountId) ?? 0) + sign * moved)
     if (t.type === 'transfer' && t.toAccountId) {
       // A cross-currency transfer lands as a different number on the other side.
       const landed = t.toAmountMinor ?? t.amountMinor

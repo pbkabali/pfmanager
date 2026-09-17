@@ -41,8 +41,8 @@ export function SettingsPage() {
             </select>
           </label>
           <p className="mt-2 text-xs text-fg-subtle">
-            Used for new accounts and shown first in summaries. Each account keeps its own currency; nothing
-            is converted.
+            New expenses are recorded in this currency unless you change it on the form. Also the default for
+            new accounts and shown first in summaries. Nothing is converted.
           </p>
         </section>
 
