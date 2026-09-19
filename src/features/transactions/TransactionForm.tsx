@@ -2,10 +2,13 @@ import { Timestamp } from 'firebase/firestore'
 import { useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
+import { Money } from '../../components/Money'
 import { parseAmount } from '../../lib/money'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
 import { accountCurrency, type Account } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
+import { daysRemaining, monthKey } from '../budgets/months'
+import { useMonthStatus } from '../budgets/useBudget'
 import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
 import { CURRENCIES } from '../profile/types'
@@ -65,6 +68,11 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
 
   const kind = type === 'income' ? 'income' : 'expense'
   const categoryOptions = categories.filter((c) => c.kind === kind && !c.archived)
+
+  // The month's budget, for showing what the chosen item still has. Follows
+  // the date field, so back-dating an expense shows that month's balance.
+  const budgetMonth = monthKey(fromDateInputValue(date))
+  const monthStatus = useMonthStatus(budgetMonth)
   const currencyOf = (id: string) =>
     accountCurrency(
       accounts.find((a) => a.id === id),
@@ -83,6 +91,11 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
     : (categoryOptions[0]?.id ?? '')
   const crossCurrency = type === 'transfer' && !!toAccount && currencyOf(account) !== currencyOf(toAccount)
   const chargedInOtherCurrency = type === 'expense' && !!account && currencyOf(account) !== expenseCurrency
+
+  const item = type === 'expense' ? monthStatus.status?.items.find((i) => i.categoryId === category) : undefined
+  const itemCurrency = monthStatus.budget?.currency ?? profileCurrency
+  const itemIsDaily = !!item && !!categories.find((c) => c.id === item.categoryId)?.daily
+  const daysLeft = daysRemaining(budgetMonth)
 
   // Currencies offered for an expense: the profile default first, then any an
   // account uses, then the standard list. Whatever the price tag said.
@@ -342,6 +355,24 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
                   </option>
                 ))}
               </select>
+              {item && (
+                <span
+                  className={`mt-1 block text-xs ${item.availableMinor < 0 ? 'text-negative-text' : 'text-fg-subtle'}`}
+                >
+                  {item.availableMinor < 0 ? 'Over by ' : 'Available this month: '}
+                  <Money amountMinor={Math.abs(item.availableMinor)} currency={itemCurrency} />
+                  {itemIsDaily && item.availableMinor > 0 && daysLeft > 0 && (
+                    <>
+                      {' · '}
+                      <Money amountMinor={Math.floor(item.availableMinor / daysLeft)} currency={itemCurrency} />
+                      /day for {daysLeft} day{daysLeft === 1 ? '' : 's'}
+                    </>
+                  )}
+                </span>
+              )}
+              {type === 'expense' && monthStatus.budget === null && (
+                <span className="mt-1 block text-xs text-fg-subtle">No budget set for this month.</span>
+              )}
             </label>
             {chargedInOtherCurrency && (
               <label className="block sm:col-span-2">

@@ -11,6 +11,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'gifts-in', name: 'Gifts received', kind: 'income', icon: '🎁', archived: false, sortOrder: 2 },
   { id: 'other-income', name: 'Other income', kind: 'income', icon: '➕', archived: false, sortOrder: 3 },
 
+  { id: 'daily', name: 'Daily expenses', kind: 'expense', icon: '☀️', archived: false, sortOrder: 9, daily: true },
   { id: 'food', name: 'Food & groceries', kind: 'expense', icon: '🍲', archived: false, sortOrder: 10 },
   { id: 'transport', name: 'Transport', kind: 'expense', icon: '🚕', archived: false, sortOrder: 11 },
   { id: 'housing', name: 'Rent & housing', kind: 'expense', icon: '🏠', archived: false, sortOrder: 12 },

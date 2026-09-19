@@ -16,3 +16,7 @@ export const AccountsPage = lazy(() =>
 export const SettingsPage = lazy(() =>
   import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
+
+export const BudgetPage = lazy(() =>
+  import('../features/budgets/BudgetPage').then((m) => ({ default: m.BudgetPage })),
+)
