@@ -34,15 +34,21 @@ export function AccountsPage() {
   // total can be read as "this much is actually yours to amass, the rest is
   // promised to the month".
   const earmarks = useEarmarks()
-  const earmarkedByCurrency = useMemo(() => {
-    const out = new Map<string, number>()
+  // Committed accounts hold money promised to someone else (tithe, parents).
+  // It is held, but it is not amassed, so it comes out of the headline too.
+  const { earmarkedByCurrency, committedByCurrency } = useMemo(() => {
+    const earmarkedByCurrency = new Map<string, number>()
+    const committedByCurrency = new Map<string, number>()
     for (const a of accounts) {
       if (a.archived) continue
       const cur = accountCurrency(a, profileCurrency)
-      out.set(cur, (out.get(cur) ?? 0) + (earmarks.get(a.id) ?? 0))
+      earmarkedByCurrency.set(cur, (earmarkedByCurrency.get(cur) ?? 0) + (earmarks.get(a.id) ?? 0))
+      if (a.committed) {
+        committedByCurrency.set(cur, (committedByCurrency.get(cur) ?? 0) + (balances.get(a.id) ?? 0))
+      }
     }
-    return out
-  }, [accounts, earmarks, profileCurrency])
+    return { earmarkedByCurrency, committedByCurrency }
+  }, [accounts, earmarks, balances, profileCurrency])
 
   return (
     <>
@@ -67,13 +73,23 @@ export function AccountsPage() {
           <div key={t.currency} className="rounded-lg border border-edge bg-surface p-4">
             <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total amassed · {t.currency}</p>
             <Money
-              amountMinor={t.totalMinor - (earmarkedByCurrency.get(t.currency) ?? 0)}
+              amountMinor={
+                t.totalMinor -
+                (earmarkedByCurrency.get(t.currency) ?? 0) -
+                (committedByCurrency.get(t.currency) ?? 0)
+              }
               currency={t.currency}
               className="text-2xl font-bold text-fg"
             />
             <p className="mt-1 text-xs text-fg-subtle">
               <Money amountMinor={t.totalMinor} currency={t.currency} /> held ·{' '}
               <Money amountMinor={earmarkedByCurrency.get(t.currency) ?? 0} currency={t.currency} /> earmarked
+              {(committedByCurrency.get(t.currency) ?? 0) > 0 && (
+                <>
+                  {' · '}
+                  <Money amountMinor={committedByCurrency.get(t.currency) ?? 0} currency={t.currency} /> committed
+                </>
+              )}
             </p>
           </div>
         ))}
@@ -102,13 +118,17 @@ export function AccountsPage() {
                   </p>
                 </div>
                 <span className="flex-none text-right">
-                  <Money amountMinor={balances.get(a.id) ?? 0} currency={currency} className="text-sm font-semibold" />
+                  {/* Same reading as the tile: what is free to amass, then how it splits. */}
+                  <Money
+                    amountMinor={(balances.get(a.id) ?? 0) - (earmarks.get(a.id) ?? 0)}
+                    currency={currency}
+                    className="text-sm font-semibold"
+                  />
                   {(earmarks.get(a.id) ?? 0) > 0 && (
                     <span className="block text-xs text-fg-subtle">
-                      <Money amountMinor={earmarks.get(a.id) ?? 0} currency={currency} /> earmarked
+                      <Money amountMinor={balances.get(a.id) ?? 0} currency={currency} /> held
                       <span className="block">
-                        <Money amountMinor={(balances.get(a.id) ?? 0) - (earmarks.get(a.id) ?? 0)} currency={currency} />{' '}
-                        free
+                        <Money amountMinor={earmarks.get(a.id) ?? 0} currency={currency} /> earmarked
                       </span>
                     </span>
                   )}
