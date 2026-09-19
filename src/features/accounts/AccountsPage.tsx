@@ -5,6 +5,7 @@ import { useUser } from '../../app/providers/useAuth'
 import { Money } from '../../components/Money'
 import { PageHeader } from '../../components/PageHeader'
 import { parseAmount } from '../../lib/money'
+import { useEarmarks } from '../budgets/useEarmarks'
 import { useProfile } from '../profile/profileContext'
 import { CURRENCIES } from '../profile/types'
 import { useTransactions } from '../transactions/useTransactions'
@@ -23,6 +24,12 @@ export function AccountsPage() {
   const [adding, setAdding] = useState(false)
 
   const balances = useMemo(() => computeBalances(accounts, transactions), [accounts, transactions])
+  // What the budget has spoken for, per account, so a balance can be read as
+  // "this much is promised to the month, this much is actually free".
+  const earmarks = useEarmarks()
+  const earmarkedInProfileCurrency = accounts
+    .filter((a) => !a.archived && accountCurrency(a, profileCurrency) === profileCurrency)
+    .reduce((sum, a) => sum + (earmarks.get(a.id) ?? 0), 0)
   // One total per currency. Adding a USD balance to a UGX balance would be a
   // number that means nothing, so the page never does it.
   const totals = useMemo(
@@ -53,6 +60,12 @@ export function AccountsPage() {
           <div key={t.currency} className="rounded-lg border border-edge bg-surface p-4">
             <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total · {t.currency}</p>
             <Money amountMinor={t.totalMinor} currency={t.currency} className="text-2xl font-bold text-fg" />
+            {t.currency === profileCurrency && earmarkedInProfileCurrency > 0 && (
+              <p className="mt-1 text-xs text-fg-subtle">
+                <Money amountMinor={earmarkedInProfileCurrency} currency={t.currency} /> earmarked ·{' '}
+                <Money amountMinor={t.totalMinor - earmarkedInProfileCurrency} currency={t.currency} /> free
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -79,7 +92,18 @@ export function AccountsPage() {
                     {a.archived && ' · archived'}
                   </p>
                 </div>
-                <Money amountMinor={balances.get(a.id) ?? 0} currency={currency} className="text-sm font-semibold" />
+                <span className="flex-none text-right">
+                  <Money amountMinor={balances.get(a.id) ?? 0} currency={currency} className="text-sm font-semibold" />
+                  {(earmarks.get(a.id) ?? 0) > 0 && (
+                    <span className="block text-xs text-fg-subtle">
+                      <Money amountMinor={earmarks.get(a.id) ?? 0} currency={currency} /> earmarked
+                      <span className="block">
+                        <Money amountMinor={(balances.get(a.id) ?? 0) - (earmarks.get(a.id) ?? 0)} currency={currency} />{' '}
+                        free
+                      </span>
+                    </span>
+                  )}
+                </span>
                 <button
                   type="button"
                   onClick={() => void setAccountArchived(user.uid, a.id, !a.archived)}

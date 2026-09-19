@@ -29,10 +29,12 @@ export function FundBudgetForm({
   month,
   categories,
   onDone,
+  onCancel,
 }: {
   month: string
   categories: Category[]
   onDone: () => void
+  onCancel: () => void
 }) {
   const user = useUser()
   const profile = useProfile()
@@ -165,7 +167,7 @@ export function FundBudgetForm({
           </dd>
         </div>
         <div className={`rounded-md p-3 ${overCap ? 'bg-danger/10' : 'bg-surface-raised'}`}>
-          <dt className={label}>Lumpsum</dt>
+          <dt className={label}>Earmarked till end of month</dt>
           <dd className={`mt-1 font-semibold ${overCap ? 'text-danger-text' : 'text-fg'}`}>
             <Money amountMinor={totalMinor} currency={currency} />
           </dd>
@@ -265,13 +267,18 @@ export function FundBudgetForm({
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={!planComplete || eligible.length === 0}
-        className="w-full rounded-md bg-accent py-2.5 font-bold text-accent-fg disabled:opacity-50"
-      >
-        Fund {monthLabelFor(month)}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={!planComplete || eligible.length === 0}
+          className="flex-1 rounded-md bg-accent py-2.5 font-bold text-accent-fg disabled:opacity-50"
+        >
+          Fund {monthLabelFor(month)}
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-md border border-edge px-4 py-2.5 text-sm text-fg-muted">
+          Cancel
+        </button>
+      </div>
     </form>
   )
 }

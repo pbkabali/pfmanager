@@ -48,6 +48,7 @@ that is deliberate.
 | `npm run preview` | Serve the production build locally, service worker enabled |
 | `npm run lint` | oxlint |
 | `npm run check:contrast` | WCAG audit of both themes. Run after any colour change |
+| `npm run make:icons` | Regenerate the PNG app icons from the logo geometry. Run after changing `favicon.svg` |
 | `npm run setup:hooks` | Point git at `.githooks/` |
 
 ## Layout

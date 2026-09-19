@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { useUser } from '../../app/providers/useAuth'
 import { PageHeader } from '../../components/PageHeader'
@@ -12,7 +12,11 @@ import { deleteTransaction, useTransactions } from './useTransactions'
 export function TransactionsPage() {
   const user = useUser()
   const { currency } = useProfile()
-  const [adding, setAdding] = useState(false)
+  // `?add` opens the form on arrival, so the Home "+ Add" lands ready to type.
+  // Kept in the URL rather than state so a refresh or back-navigation agrees.
+  const [params, setParams] = useSearchParams()
+  const adding = params.has('add')
+  const setAdding = (open: boolean) => setParams(open ? { add: '' } : {}, { replace: true })
   const { transactions, loading, fromCache, error } = useTransactions()
   const { byId: categories } = useCategories()
   const { byId: accounts } = useAccounts()
@@ -25,7 +29,7 @@ export function TransactionsPage() {
         action={
           <button
             type="button"
-            onClick={() => setAdding((v) => !v)}
+            onClick={() => setAdding(!adding)}
             className="rounded-md bg-accent px-4 py-2 text-sm font-bold text-accent-fg"
           >
             {adding ? 'Close' : '+ Add'}
@@ -35,7 +39,14 @@ export function TransactionsPage() {
 
       {adding && (
         <div className="mb-6">
-          <TransactionForm />
+          <TransactionForm
+            onSaved={() => {
+              // Back to the list, with the new row in view at the top.
+              setAdding(false)
+              window.scrollTo({ top: 0 })
+            }}
+            onCancel={() => setAdding(false)}
+          />
         </div>
       )}
 

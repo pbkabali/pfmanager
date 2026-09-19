@@ -47,7 +47,7 @@ function newPart(accountId = ''): Part {
  * transfer between accounts of different currencies asks for both sides.
  * No exchange rates: the numbers recorded are the numbers that happened.
  */
-export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
+export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; onCancel?: () => void }) {
   const user = useUser()
   const profile = useProfile()
   const { currency: profileCurrency } = profile
@@ -458,9 +458,16 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
         </p>
       )}
 
-      <button type="submit" className="w-full rounded-md bg-accent py-2.5 font-bold text-accent-fg">
-        Save
-      </button>
+      <div className="flex gap-2">
+        <button type="submit" className="flex-1 rounded-md bg-accent py-2.5 font-bold text-accent-fg">
+          Save
+        </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="rounded-md border border-edge px-4 py-2.5 text-sm text-fg-muted">
+            Cancel
+          </button>
+        )}
+      </div>
 
       {!online && (
         <p className="text-center text-xs text-fg-subtle">
