@@ -90,7 +90,8 @@ export function BudgetPage() {
           <div className="rounded-lg border border-dashed border-edge p-8 text-center">
             <p className="text-sm text-fg-muted">No budget for {monthLabelFor(month)} yet.</p>
             <p className="mt-1 text-xs text-fg-subtle">
-              Earmark a lumpsum from your accounts and it is split between the items in your plan.
+              Earmark an amount from your accounts until the end of the month and it is split between the items in
+              your plan.
             </p>
             <button
               type="button"
@@ -104,7 +105,7 @@ export function BudgetPage() {
       ) : budget && status ? (
         <div className="space-y-6">
           <section className="grid gap-3 sm:grid-cols-3" aria-label="Month summary">
-            <Tile label="Lumpsum">
+            <Tile label="Earmarked till end of month">
               <Money amountMinor={status.totalMinor} currency={budget.currency} className="text-xl font-bold" />
               <p className="mt-1 text-xs text-fg-subtle">
                 <Money amountMinor={budget.fundedMinor} currency={budget.currency} /> new

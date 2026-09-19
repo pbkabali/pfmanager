@@ -99,7 +99,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
         </p>
       </div>
       <p className="text-xs text-fg-subtle">
-        Each item takes its share of the month's lumpsum. Mark one as daily to see its balance per day.
+        Each item takes its share of what is earmarked for the month. Mark one as daily to see its balance per day.
       </p>
 
       <ul className="divide-y divide-edge">

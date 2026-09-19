@@ -167,7 +167,7 @@ export function FundBudgetForm({
           </dd>
         </div>
         <div className={`rounded-md p-3 ${overCap ? 'bg-danger/10' : 'bg-surface-raised'}`}>
-          <dt className={label}>Lumpsum</dt>
+          <dt className={label}>Earmarked till end of month</dt>
           <dd className={`mt-1 font-semibold ${overCap ? 'text-danger-text' : 'text-fg'}`}>
             <Money amountMinor={totalMinor} currency={currency} />
           </dd>

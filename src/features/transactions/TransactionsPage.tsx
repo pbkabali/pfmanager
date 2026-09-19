@@ -45,6 +45,7 @@ export function TransactionsPage() {
               setAdding(false)
               window.scrollTo({ top: 0 })
             }}
+            onCancel={() => setAdding(false)}
           />
         </div>
       )}

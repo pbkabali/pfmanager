@@ -84,7 +84,7 @@ export function DashboardPage() {
         subtitle={`${monthLabel()}${fromCache ? ' · showing saved copy' : ''}`}
         action={
           <Link to="/transactions?add" className="rounded-md bg-accent px-4 py-2 text-sm font-bold text-accent-fg">
-            + Add
+            Record activity
           </Link>
         }
       />
