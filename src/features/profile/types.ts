@@ -6,6 +6,26 @@ import type { Timestamp } from 'firebase/firestore'
  * Deliberately small. Preferences live here; the ledger lives in the
  * subcollections so this document stays cheap to listen to.
  */
+/**
+ * A standing rule: on every income, this share moves to a dedicated account.
+ * Tithe and support for parents are the motivating cases. Optional per
+ * person; an empty list means income lands in full and nothing else happens.
+ */
+export type SetAside = {
+  id: string
+  name: string
+  /** Basis points of each income part (10000 = 100%). */
+  shareBp: number
+  /**
+   * Destination per currency: the income's currency picks the account, so a
+   * UGX salary tithes into a UGX account and a USD one into a USD account.
+   * An income in a currency with no entry is flagged on the form and skipped;
+   * nothing is converted.
+   */
+  accounts: Record<string, string>
+  paused?: boolean
+}
+
 export type Profile = {
   /**
    * ISO 4217 code new expenses are recorded in unless changed on the form,
@@ -21,6 +41,8 @@ export type Profile = {
    * read via `budgetCapPercent()`.
    */
   budgetCapPercent?: number
+  /** Standing set-aside rules applied to every income. Absent means none. */
+  setAsides?: SetAside[]
   createdAt: Timestamp | null
   /** Bumped when the default categories or accounts are re-seeded. */
   schemaVersion: number

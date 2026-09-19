@@ -64,7 +64,13 @@ export function useAccounts(): AccountsState {
 
 export function createAccount(
   uid: string,
-  input: { name: string; type: AccountType; currency: string; openingBalanceMinor: number },
+  input: {
+    name: string
+    type: AccountType
+    currency: string
+    openingBalanceMinor: number
+    committed?: boolean
+  },
 ) {
   return addDoc(collection(db, userPath(uid, userCollections.accounts)), {
     ...input,
@@ -75,4 +81,8 @@ export function createAccount(
 
 export function setAccountArchived(uid: string, accountId: string, archived: boolean) {
   return updateDoc(doc(db, userPath(uid, userCollections.accounts), accountId), { archived })
+}
+
+export function setAccountCommitted(uid: string, accountId: string, committed: boolean) {
+  return updateDoc(doc(db, userPath(uid, userCollections.accounts), accountId), { committed })
 }

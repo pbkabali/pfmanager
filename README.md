@@ -59,12 +59,13 @@ src/
   features/
     auth/           login (Google + email)
     profile/        users/{uid} document, first-run seeding, ProfileGate
-    accounts/       cash, mobile money, bank... with derived balances
+    accounts/       cash, mobile money, bank... with derived balances; per-account ledger
     budgets/        the monthly envelope: plan shares, funding, per-item balances
     categories/     income/expense categories, seeded defaults, plan shares
     transactions/   the ledger: types, live query hook, form, list
     dashboard/      this-month totals and top spending
-    settings/       currency, theme, sign out
+    setAsides/      optional standing rules: a share of every income to its own account
+    settings/       currency, budget cap, set-aside rules, theme, sign out
   lib/firebase/     config, app, auth, db (paths live here)
   lib/money.ts      integer minor-unit amounts, Intl formatting/parsing
   styles/           palette.css (edit to rebrand), theme.css (roles)
@@ -77,14 +78,16 @@ Everything a person owns lives under `users/{uid}`:
 
 ```
 users/{uid}                     profile: currency (default for new accounts),
-                                displayName, schemaVersion
-users/{uid}/accounts/{id}       name, type, currency, openingBalanceMinor, archived
+                                displayName, budgetCapPercent, setAsides[],
+                                schemaVersion
+users/{uid}/accounts/{id}       name, type, currency, openingBalanceMinor,
+                                committed?, archived
 users/{uid}/categories/{id}     name, kind (income|expense), icon, sortOrder,
                                 shareBp? (plan share, 10000 = 100%), daily?
 users/{uid}/transactions/{id}   type, amountMinor, currency, accountId,
                                 accountAmountMinor?, toAccountId?, toAmountMinor?,
-                                categoryId?, groupId?, date, note, createdAt,
-                                updatedAt
+                                setAsideId?, categoryId?, groupId?, date, note,
+                                createdAt, updatedAt
 users/{uid}/budgets/{YYYY-MM}   currency, fundedMinor, carriedMinor, sources[],
                                 shares{}, allocations{}, capPercent
 ```
@@ -138,6 +141,18 @@ document at funding time so editing the plan affects the next month only.
 The carry-over is the sum of unspent item balances at the moment the next
 month is funded. Expenses in another currency than the budget's cannot be
 counted without a rate and are reported as such.
+
+**Set-asides (optional).** A rule on the profile says: on every income, move
+this share into that account. Rules are per currency, so a UGX salary tithes
+into a UGX account and nothing is converted. When an income is recorded the
+form previews each rule's line with a checkbox, and the batch writes the
+income in full plus one transfer per line, tagged `setAsideId` and sharing
+the income's `groupId`. The ledger says what happened; the tag says why.
+Destination accounts are `committed`: ordinary accounts with derived
+balances, but excluded from the budget cap and funding sources because the
+money is promised. Disbursing is any expense or transfer out of them; the
+per-account ledger page shows the history. A person with no rules sees
+nothing of this.
 
 **Why balances are derived.** An account's balance is its opening balance plus
 every movement, computed on the device. Storing a running balance would mean

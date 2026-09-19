@@ -34,6 +34,11 @@ export type Transaction = {
   /** Absent on transfers, which are neither income nor spending. */
   categoryId?: string
   /**
+   * Transfers only: the set-aside rule that produced this movement, so the row
+   * can read "Tithe on Salary" and totals per rule are a filter away.
+   */
+  setAsideId?: string
+  /**
    * Set on each part of an income that was split across several accounts.
    * All parts share the id, date, category and note; each is a complete
    * transaction in its own right, so balances and totals need no special case.
