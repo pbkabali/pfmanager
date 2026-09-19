@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "pfmanager-stg",
+    "staging": "pfmanager-stg",
+    "production": "pfmanager-live"
+  }
+}
