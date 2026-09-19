@@ -24,6 +24,10 @@ export function BudgetPage() {
   const { categories, byId } = useCategories()
   const { byId: accounts } = useAccounts()
   const [editingPlan, setEditingPlan] = useState(false)
+  // The funding form is opened on purpose, never shown by default: a month
+  // with no budget is a normal state to browse past, not a form to escape.
+  const [fundingMonth, setFundingMonth] = useState<string | null>(null)
+  const funding = fundingMonth === month
 
   const items = useMemo(
     () =>
@@ -75,8 +79,27 @@ export function BudgetPage() {
           <p className="rounded-lg border border-dashed border-edge p-8 text-center text-sm text-fg-subtle">
             No budget was set for {monthLabelFor(month)}.
           </p>
+        ) : funding ? (
+          <FundBudgetForm
+            month={month}
+            categories={categories}
+            onDone={() => setFundingMonth(null)}
+            onCancel={() => setFundingMonth(null)}
+          />
         ) : (
-          <FundBudgetForm month={month} categories={categories} onDone={() => undefined} />
+          <div className="rounded-lg border border-dashed border-edge p-8 text-center">
+            <p className="text-sm text-fg-muted">No budget for {monthLabelFor(month)} yet.</p>
+            <p className="mt-1 text-xs text-fg-subtle">
+              Earmark a lumpsum from your accounts and it is split between the items in your plan.
+            </p>
+            <button
+              type="button"
+              onClick={() => setFundingMonth(month)}
+              className="mt-4 rounded-md bg-accent px-4 py-2 text-sm font-bold text-accent-fg"
+            >
+              Fund {monthLabelFor(month)}
+            </button>
+          </div>
         )
       ) : budget && status ? (
         <div className="space-y-6">
