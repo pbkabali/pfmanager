@@ -85,8 +85,9 @@ users/{uid}/transactions/{id}   type, amountMinor, currency, accountId,
                                 accountAmountMinor?, toAccountId?, toAmountMinor?,
                                 categoryId?, groupId?, date, note, createdAt,
                                 updatedAt
-users/{uid}/budgets/{YYYY-MM}   currency, fundedMinor, carriedMinor, sources[],
-                                shares{}, allocations{}, capPercent
+users/{uid}/budgets/{YYYY-MM}   currency, fundedMinor, carriedMinor,
+                                carriedByItem{}, sources[], shares{},
+                                allocations{}, capPercent
 ```
 
 **Why subcollections.** `firestore.rules` protects the lot with one check,
@@ -135,8 +136,10 @@ flagged `daily` also shows its balance divided over the days left in the
 month. Funding writes no transactions -- money stays where it is and the
 budget document records what it is for. Shares are copied into the month's
 document at funding time so editing the plan affects the next month only.
-The carry-over is the sum of unspent item balances at the moment the next
-month is funded. Expenses in another currency than the budget's cannot be
+Carry-over is per item, taken at the moment the next month is funded: an
+item's unspent balance is added on top of that same item's share
+(`carriedByItem`); a leftover whose item has since left the plan has no home
+and joins the pool, so it is split by the shares like new money. Expenses in another currency than the budget's cannot be
 counted without a rate and are reported as such.
 
 **Why balances are derived.** An account's balance is its opening balance plus

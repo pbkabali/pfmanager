@@ -165,6 +165,12 @@ export function BudgetPage() {
                         />
                         <span className="block text-xs text-fg-subtle">
                           of <Money amountMinor={item.allocatedMinor} currency={budget.currency} />
+                          {item.carriedMinor > 0 && (
+                            <>
+                              {' · '}
+                              <Money amountMinor={item.carriedMinor} currency={budget.currency} /> carried
+                            </>
+                          )}
                         </span>
                       </span>
                     </div>
@@ -205,7 +211,8 @@ export function BudgetPage() {
             </ul>
             <p className="mt-2 text-xs text-fg-subtle">
               Cap was {budget.capPercent}%. If this month ended now,{' '}
-              <Money amountMinor={status.carryOverMinor} currency={budget.currency} /> would carry into the next.
+              <Money amountMinor={status.carryOverMinor} currency={budget.currency} /> would carry into the next,
+              each item's balance staying with that item.
             </p>
             {isCurrent && (
               <p className="mt-2 text-xs text-fg-subtle">

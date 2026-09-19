@@ -10,7 +10,7 @@ import type { Category } from '../categories/types'
 import { useProfile } from '../profile/profileContext'
 import { budgetCapPercent } from '../profile/types'
 import { useTransactions } from '../transactions/useTransactions'
-import { allocate, BP_TOTAL, formatPercent, sharesTotal } from './allocate'
+import { BP_TOTAL, formatPercent, planMonth, sharesTotal } from './allocate'
 import { monthLabelFor, shiftMonth } from './months'
 import { createBudget, useMonthStatus } from './useBudget'
 
@@ -50,9 +50,9 @@ export function FundBudgetForm({
   const poolMinor = eligible.reduce((sum, a) => sum + (balances.get(a.id) ?? 0), 0)
   const capMinor = Math.max(0, Math.floor((poolMinor * capPercent) / 100))
 
-  // Carry-over: what the previous month has left unspent, right now.
+  // Carry-over: what the previous month has left unspent, right now, per item.
   const previous = useMonthStatus(shiftMonth(month, -1))
-  const carriedMinor = previous.status?.carryOverMinor ?? 0
+  const leftovers = previous.status?.leftovers ?? {}
 
   const shares = useMemo(() => {
     const out: Record<string, number> = {}
@@ -72,8 +72,10 @@ export function FundBudgetForm({
     return { ...l, accountId: (eligible.find((a) => !taken.has(a.id)) ?? eligible[0])?.id ?? '' }
   })
   const fundedMinor = resolved.reduce((sum, l) => sum + (parseAmount(l.amount, currency) ?? 0), 0)
+  // Cheap enough to redo each render; a handful of items.
+  const { carriedMinor, carriedByItem, allocations: preview } = planMonth(fundedMinor, shares, leftovers)
+  const pooledCarry = carriedMinor - Object.values(carriedByItem).reduce((sum, v) => sum + v, 0)
   const totalMinor = carriedMinor + fundedMinor
-  const preview = useMemo(() => allocate(totalMinor, shares), [totalMinor, shares])
   const overCap = fundedMinor > capMinor
 
   function onSubmit(event: FormEvent) {
@@ -105,9 +107,10 @@ export function FundBudgetForm({
       currency,
       fundedMinor,
       carriedMinor,
+      carriedByItem,
       sources,
       shares,
-      allocations: allocate(totalMinor, shares),
+      allocations: preview,
       capPercent,
     }).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : 'Could not save.'))
     onDone()
@@ -121,6 +124,7 @@ export function FundBudgetForm({
         <h2 className="text-base font-bold text-fg">Fund {monthLabelFor(month)}</h2>
         <p className="mt-0.5 text-xs text-fg-subtle">
           Set aside part of what you hold in {currency}. The money stays where it is; this records what it is for.
+          Each item's unspent balance from last month stays with that item.
         </p>
       </div>
 
@@ -135,7 +139,18 @@ export function FundBudgetForm({
             )}
           </dd>
           <dd className="text-xs text-fg-subtle">
-            {previous.budget ? `unspent in ${monthLabelFor(shiftMonth(month, -1))}` : 'no previous budget'}
+            {previous.budget ? (
+              <>
+                unspent in {monthLabelFor(shiftMonth(month, -1))}
+                {pooledCarry > 0 && (
+                  <>
+                    , <Money amountMinor={pooledCarry} currency={currency} /> from items no longer in the plan
+                  </>
+                )}
+              </>
+            ) : (
+              'no previous budget'
+            )}
           </dd>
         </div>
         <div className="rounded-md bg-surface-raised p-3">
@@ -225,11 +240,18 @@ export function FundBudgetForm({
               .sort((a, b) => (byId.get(a[0])?.sortOrder ?? 0) - (byId.get(b[0])?.sortOrder ?? 0))
               .map(([id, amount]) => (
                 <li key={id} className="flex items-center justify-between gap-3 py-1.5">
-                  <span className="truncate text-fg">
+                  <span className="min-w-0 truncate text-fg">
                     {byId.get(id)?.icon} {byId.get(id)?.name ?? id}
                     <span className="ml-2 text-xs text-fg-subtle">{formatPercent(shares[id] ?? 0)}%</span>
                   </span>
-                  <Money amountMinor={amount} currency={currency} className="font-semibold" />
+                  <span className="flex-none text-right">
+                    <Money amountMinor={amount} currency={currency} className="font-semibold" />
+                    {(carriedByItem[id] ?? 0) > 0 && (
+                      <span className="block text-xs text-fg-subtle">
+                        incl. <Money amountMinor={carriedByItem[id] ?? 0} currency={currency} /> carried
+                      </span>
+                    )}
+                  </span>
                 </li>
               ))}
           </ul>

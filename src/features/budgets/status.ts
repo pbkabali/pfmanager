@@ -5,7 +5,10 @@ import type { Budget } from './types'
 export type ItemStatus = {
   categoryId: string
   shareBp: number
+  /** Share of the pool plus own carry-over. */
   allocatedMinor: number
+  /** The part of `allocatedMinor` that was this item's own leftover last month. */
+  carriedMinor: number
   spentMinor: number
   /** Allocation less spending; negative when overspent. */
   availableMinor: number
@@ -19,6 +22,8 @@ export type BudgetStatus = {
   availableMinor: number
   /** What would roll into next month if it ended now: unspent balances only. */
   carryOverMinor: number
+  /** The same, per item, for the next month to place on top of each share. */
+  leftovers: Record<string, number>
   /** Spending in the budget currency on categories outside the plan. */
   unbudgetedMinor: number
   /** Expenses that could not be counted because they are in another currency. */
@@ -74,6 +79,7 @@ export function budgetStatus(
       categoryId,
       shareBp: budget.shares[categoryId] ?? 0,
       allocatedMinor,
+      carriedMinor: budget.carriedByItem?.[categoryId] ?? 0,
       spentMinor,
       availableMinor: allocatedMinor - spentMinor,
     }
@@ -81,7 +87,9 @@ export function budgetStatus(
 
   const totalMinor = budget.fundedMinor + budget.carriedMinor
   const spentMinor = items.reduce((sum, i) => sum + i.spentMinor, 0)
-  const carryOverMinor = items.reduce((sum, i) => sum + Math.max(i.availableMinor, 0), 0)
+  const leftovers: Record<string, number> = {}
+  for (const i of items) if (i.availableMinor > 0) leftovers[i.categoryId] = i.availableMinor
+  const carryOverMinor = Object.values(leftovers).reduce((sum, v) => sum + v, 0)
 
   return {
     items,
@@ -89,6 +97,7 @@ export function budgetStatus(
     spentMinor,
     availableMinor: totalMinor - spentMinor,
     carryOverMinor,
+    leftovers,
     unbudgetedMinor,
     unconvertedCount,
   }
