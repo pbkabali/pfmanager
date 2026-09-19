@@ -1,7 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
-import type { Category } from '../categories/types'
+import { cancelButton } from '../../components/buttonStyles'
+import { OUT_OF_BUDGET_CATEGORY_ID, type Category } from '../categories/types'
 import { savePlan, setCategoryArchived, type PlanEntry } from '../categories/useCategories'
 import { BP_TOTAL, formatPercent, parsePercent } from './allocate'
 
@@ -20,7 +21,10 @@ let nextKey = 1
 export function PlanEditor({ categories, onClose }: { categories: Category[]; onClose: () => void }) {
   const user = useUser()
   const items = useMemo(
-    () => categories.filter((c) => c.kind === 'expense' && !c.archived).sort((a, b) => a.sortOrder - b.sortOrder),
+    () =>
+      categories
+        .filter((c) => c.kind === 'expense' && !c.archived && c.id !== OUT_OF_BUDGET_CATEGORY_ID)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     [categories],
   )
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
@@ -213,7 +217,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
         <button type="submit" className="flex-1 rounded-md bg-accent py-2.5 font-bold text-accent-fg">
           Save plan
         </button>
-        <button type="button" onClick={onClose} className="rounded-md border border-edge px-4 py-2.5 text-sm text-fg-muted">
+        <button type="button" onClick={onClose} className={cancelButton}>
           Cancel
         </button>
       </div>

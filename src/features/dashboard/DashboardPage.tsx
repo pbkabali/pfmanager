@@ -99,7 +99,7 @@ export function DashboardPage() {
               <Tile label="Received">
                 <Money amountMinor={s.income} currency={s.currency} direction="in" className="text-xl font-bold" />
               </Tile>
-              <Tile label="Spent">
+              <Tile label="Already spent">
                 <Money amountMinor={s.expense} currency={s.currency} direction="out" className="text-xl font-bold" />
               </Tile>
               <Tile label="Net">
@@ -115,7 +115,7 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section>
+        <section className="min-w-0">
           <h2 className="mb-2 text-sm font-semibold tracking-wide text-fg-muted uppercase">Top spending</h2>
           {loading ? (
             <p className="text-sm text-fg-subtle">Loading…</p>
@@ -135,10 +135,10 @@ export function DashboardPage() {
                       return (
                         <li key={id} className="rounded-lg border border-edge bg-surface p-3">
                           <div className="flex items-center justify-between gap-3 text-sm">
-                            <span className="truncate font-semibold text-fg">
+                            <span className="min-w-0 truncate font-semibold text-fg">
                               {category?.icon ?? '•'} {category?.name ?? 'Uncategorised'}
                             </span>
-                            <Money amountMinor={amount} currency={s.currency} className="font-semibold" />
+                            <Money amountMinor={amount} currency={s.currency} className="flex-none font-semibold" />
                           </div>
                           {/* Proportion bar: the seed of the category chart to come. */}
                           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-raised" aria-hidden>
@@ -157,7 +157,7 @@ export function DashboardPage() {
           )}
         </section>
 
-        <section>
+        <section className="min-w-0">
           <h2 className="mb-2 text-sm font-semibold tracking-wide text-fg-muted uppercase">Recent</h2>
           {transactions.length === 0 ? (
             <p className="rounded-lg border border-dashed border-edge p-6 text-center text-sm text-fg-subtle">

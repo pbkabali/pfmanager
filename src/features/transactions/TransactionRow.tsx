@@ -85,7 +85,7 @@ export function TransactionRow({
           {pending && ' · not yet synced'}
         </p>
       </div>
-      <span className="text-sm font-semibold">
+      <span className="flex-none text-right text-sm font-semibold">
         <Money amountMinor={shownAmount} currency={shownCurrency} direction={direction} />
         {landed}
       </span>

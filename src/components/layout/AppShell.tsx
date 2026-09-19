@@ -65,7 +65,7 @@ export function AppShell() {
         </header>
 
         {/* pb-24 clears the fixed mobile tab bar. */}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-24 md:px-8 md:pt-8 md:pb-8">
+        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 pt-4 pb-24 md:px-8 md:pt-8 md:pb-8">
           <InstallPrompt />
           <Outlet />
         </main>

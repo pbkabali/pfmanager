@@ -137,7 +137,10 @@ left unspent is split between the expense categories that carry a share
 (`shareBp`, totalling 100%); each expense recorded against a category draws
 down that item's balance, shown on the form as you record it; the item
 flagged `daily` also shows its balance divided over the days left in the
-month. Funding writes no transactions -- money stays where it is and the
+month. A plan item is paid only from the accounts the month was funded from
+and cannot be spent past what it still has; the fixed "Out of budget"
+category (`out-of-budget`) sits outside the plan, may be paid from any
+account, and is reported as unbudgeted spending. Funding writes no transactions -- money stays where it is and the
 budget document records what it is for. Shares are copied into the month's
 document at funding time so editing the plan affects the next month only.
 Carry-over is per item, taken at the moment the next month is funded: an
