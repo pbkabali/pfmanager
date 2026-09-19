@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useUser } from '../../app/providers/useAuth'
 import { Money } from '../../components/Money'
 import { PageHeader } from '../../components/PageHeader'
+import { useEarmarks } from '../budgets/useEarmarks'
 import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
 import { TransactionRow } from '../transactions/TransactionRow'
@@ -29,6 +30,7 @@ export function AccountPage() {
   const account = byId.get(accountId)
   const currency = accountCurrency(account, profileCurrency)
   const balances = useMemo(() => computeBalances(accounts, transactions), [accounts, transactions])
+  const earmarked = useEarmarks().get(accountId) ?? 0
   const rows = useMemo(
     () => transactions.filter((t) => t.accountId === accountId || t.toAccountId === accountId),
     [transactions, accountId],
@@ -71,6 +73,12 @@ export function AccountPage() {
         <div className="rounded-lg border border-edge bg-surface p-4">
           <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Balance</p>
           <Money amountMinor={balances.get(accountId) ?? 0} currency={currency} className="text-2xl font-bold text-fg" />
+          {earmarked > 0 && (
+            <p className="mt-1 text-xs text-fg-subtle">
+              <Money amountMinor={earmarked} currency={currency} /> earmarked for the budget ·{' '}
+              <Money amountMinor={(balances.get(accountId) ?? 0) - earmarked} currency={currency} /> free
+            </p>
+          )}
         </div>
         {account && (
           <div className="flex flex-col justify-center gap-2 text-xs">

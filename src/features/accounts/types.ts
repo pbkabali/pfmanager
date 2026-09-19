@@ -9,7 +9,7 @@ export const ACCOUNT_TYPES: { value: AccountType; label: string; icon: string }[
   { value: 'mobile_money', label: 'Mobile money', icon: '📱' },
   { value: 'bank', label: 'Bank account', icon: '🏦' },
   { value: 'card', label: 'Card', icon: '💳' },
-  { value: 'savings', label: 'Savings', icon: '🐖' },
+  { value: 'savings', label: 'Savings', icon: '💰' },
   { value: 'other', label: 'Other', icon: '▤' },
 ]
 
