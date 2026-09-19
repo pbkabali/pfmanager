@@ -6,7 +6,7 @@ import { ThemeToggle } from '../../components/ThemeToggle'
 import { signOut } from '../../lib/firebase/auth'
 import { db, userDocPath } from '../../lib/firebase/db'
 import { useProfile } from '../profile/profileContext'
-import { CURRENCIES } from '../profile/types'
+import { budgetCapPercent, CURRENCIES } from '../profile/types'
 
 const label = 'text-xs font-semibold tracking-wide text-fg-muted uppercase'
 
@@ -43,6 +43,35 @@ export function SettingsPage() {
           <p className="mt-2 text-xs text-fg-subtle">
             New expenses are recorded in this currency unless you change it on the form. Also the default for
             new accounts and shown first in summaries. Nothing is converted.
+          </p>
+        </section>
+
+        <section className="rounded-lg border border-edge bg-surface p-4">
+          <label className="block">
+            <span className={label}>Monthly budget cap</span>
+            <span className="mt-1 flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={100}
+                step={1}
+                defaultValue={budgetCapPercent(profile)}
+                onBlur={(e) => {
+                  const value = Math.round(Number(e.target.value))
+                  if (Number.isFinite(value) && value >= 1 && value <= 100 && value !== budgetCapPercent(profile)) {
+                    void updateDoc(doc(db, userDocPath(user.uid)), { budgetCapPercent: value })
+                  } else {
+                    e.target.value = String(budgetCapPercent(profile))
+                  }
+                }}
+                className="w-24 rounded-md border border-edge bg-bg px-3 py-2 text-right text-fg tabular"
+              />
+              <span className="text-sm text-fg-muted">% of what you hold in {profile.currency}</span>
+            </span>
+          </label>
+          <p className="mt-2 text-xs text-fg-subtle">
+            The most you can earmark for a month, measured against the total balance of your {profile.currency}{' '}
+            accounts when you fund it.
           </p>
         </section>
 

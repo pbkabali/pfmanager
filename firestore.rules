@@ -57,9 +57,14 @@ service cloud.firestore {
         allow create, update: if isOwner(uid) && hasIntegerAmount() && hasIntegerSecondaryAmounts();
       }
 
-      match /budgets/{budgetId} {
+      /* One document per month, keyed YYYY-MM. Both money fields are
+         integers in the budget's currency; allocations are derived from
+         them on the client and stored for readability. */
+      match /budgets/{month} {
         allow read, delete: if isOwner(uid);
-        allow create, update: if isOwner(uid) && hasIntegerAmount();
+        allow create, update: if isOwner(uid)
+          && request.resource.data.fundedMinor is int
+          && request.resource.data.carriedMinor is int;
       }
     }
 

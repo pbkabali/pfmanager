@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth'
 import { db, userCollections, userDocPath, userPath } from '../../lib/firebase/db'
 import { DEFAULT_ACCOUNT_ID } from '../accounts/types'
 import { DEFAULT_CATEGORIES } from '../categories/defaults'
-import { DEFAULT_CURRENCY, PROFILE_SCHEMA_VERSION } from './types'
+import { DEFAULT_BUDGET_CAP_PERCENT, DEFAULT_CURRENCY, PROFILE_SCHEMA_VERSION } from './types'
 
 /**
  * First-run setup: profile document, default categories, one Cash account.
@@ -20,6 +20,7 @@ export async function seedProfile(user: User): Promise<void> {
   batch.set(doc(db, userDocPath(user.uid)), {
     currency: DEFAULT_CURRENCY,
     displayName: user.displayName ?? null,
+    budgetCapPercent: DEFAULT_BUDGET_CAP_PERCENT,
     createdAt: serverTimestamp(),
     schemaVersion: PROFILE_SCHEMA_VERSION,
   })

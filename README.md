@@ -60,7 +60,8 @@ src/
     auth/           login (Google + email)
     profile/        users/{uid} document, first-run seeding, ProfileGate
     accounts/       cash, mobile money, bank... with derived balances
-    categories/     income/expense categories, seeded defaults
+    budgets/        the monthly envelope: plan shares, funding, per-item balances
+    categories/     income/expense categories, seeded defaults, plan shares
     transactions/   the ledger: types, live query hook, form, list
     dashboard/      this-month totals and top spending
     settings/       currency, theme, sign out
@@ -78,12 +79,14 @@ Everything a person owns lives under `users/{uid}`:
 users/{uid}                     profile: currency (default for new accounts),
                                 displayName, schemaVersion
 users/{uid}/accounts/{id}       name, type, currency, openingBalanceMinor, archived
-users/{uid}/categories/{id}     name, kind (income|expense), icon, sortOrder
+users/{uid}/categories/{id}     name, kind (income|expense), icon, sortOrder,
+                                shareBp? (plan share, 10000 = 100%), daily?
 users/{uid}/transactions/{id}   type, amountMinor, currency, accountId,
                                 accountAmountMinor?, toAccountId?, toAmountMinor?,
                                 categoryId?, groupId?, date, note, createdAt,
                                 updatedAt
-users/{uid}/budgets/{id}        (rules written, feature not yet built)
+users/{uid}/budgets/{YYYY-MM}   currency, fundedMinor, carriedMinor, sources[],
+                                shares{}, allocations{}, capPercent
 ```
 
 **Why subcollections.** `firestore.rules` protects the lot with one check,
@@ -119,6 +122,22 @@ but stored as one income transaction per destination, each in its account's
 currency, sharing a `groupId`. Balances, filters and per-currency totals then
 need no special case, and the batch write means a person never sees half a
 salary.
+
+**The monthly envelope.** The workflow the app is built around: income
+lands in accounts in whatever currency it arrives in; on the last day of the
+month a lumpsum is earmarked for the next month from the accounts in the
+profile currency, capped at a configurable percentage (`budgetCapPercent`,
+default 50) of their combined balance; that lumpsum plus whatever last month
+left unspent is split between the expense categories that carry a share
+(`shareBp`, totalling 100%); each expense recorded against a category draws
+down that item's balance, shown on the form as you record it; the item
+flagged `daily` also shows its balance divided over the days left in the
+month. Funding writes no transactions -- money stays where it is and the
+budget document records what it is for. Shares are copied into the month's
+document at funding time so editing the plan affects the next month only.
+The carry-over is the sum of unspent item balances at the moment the next
+month is funded. Expenses in another currency than the budget's cannot be
+counted without a rate and are reported as such.
 
 **Why balances are derived.** An account's balance is its opening balance plus
 every movement, computed on the device. Storing a running balance would mean
@@ -189,7 +208,6 @@ in production.
 - Charts: spending by category, month-over-month, cash-flow over time. The
   dashboard already computes the by-category data; choose a charting approach
   before adding a dependency.
-- Budgets per category per month (rules already allow the collection).
 - Recurring transactions (needs Cloud Functions, therefore Blaze).
 - Edit a transaction in place; today it is delete and re-add.
 - Receipt photos (needs Storage, therefore Blaze).

@@ -8,6 +8,7 @@ import { ThemeToggle } from '../ThemeToggle'
 const navItems = [
   { to: '/', label: 'Home', icon: '⌂', end: true },
   { to: '/transactions', label: 'Activity', icon: '≡', end: false },
+  { to: '/budget', label: 'Budget', icon: '◎', end: false },
   { to: '/accounts', label: 'Accounts', icon: '▤', end: false },
   { to: '/settings', label: 'Settings', icon: '⚙', end: false },
 ]
@@ -71,7 +72,7 @@ export function AppShell() {
       </div>
 
       {/* ---- Tab bar (mobile) ---- */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-edge bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-edge bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
