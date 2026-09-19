@@ -24,18 +24,25 @@ export function AccountsPage() {
   const [adding, setAdding] = useState(false)
 
   const balances = useMemo(() => computeBalances(accounts, transactions), [accounts, transactions])
-  // What the budget has spoken for, per account, so a balance can be read as
-  // "this much is promised to the month, this much is actually free".
-  const earmarks = useEarmarks()
-  const earmarkedInProfileCurrency = accounts
-    .filter((a) => !a.archived && accountCurrency(a, profileCurrency) === profileCurrency)
-    .reduce((sum, a) => sum + (earmarks.get(a.id) ?? 0), 0)
   // One total per currency. Adding a USD balance to a UGX balance would be a
   // number that means nothing, so the page never does it.
   const totals = useMemo(
     () => totalsByCurrency(accounts, balances, profileCurrency),
     [accounts, balances, profileCurrency],
   )
+  // What the budget has spoken for, per account and then per currency, so a
+  // total can be read as "this much is actually yours to amass, the rest is
+  // promised to the month".
+  const earmarks = useEarmarks()
+  const earmarkedByCurrency = useMemo(() => {
+    const out = new Map<string, number>()
+    for (const a of accounts) {
+      if (a.archived) continue
+      const cur = accountCurrency(a, profileCurrency)
+      out.set(cur, (out.get(cur) ?? 0) + (earmarks.get(a.id) ?? 0))
+    }
+    return out
+  }, [accounts, earmarks, profileCurrency])
 
   return (
     <>
@@ -58,14 +65,16 @@ export function AccountsPage() {
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(totals.length ? totals : [{ currency: profileCurrency, totalMinor: 0 }]).map((t) => (
           <div key={t.currency} className="rounded-lg border border-edge bg-surface p-4">
-            <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total · {t.currency}</p>
-            <Money amountMinor={t.totalMinor} currency={t.currency} className="text-2xl font-bold text-fg" />
-            {t.currency === profileCurrency && earmarkedInProfileCurrency > 0 && (
-              <p className="mt-1 text-xs text-fg-subtle">
-                <Money amountMinor={earmarkedInProfileCurrency} currency={t.currency} /> earmarked ·{' '}
-                <Money amountMinor={t.totalMinor - earmarkedInProfileCurrency} currency={t.currency} /> free
-              </p>
-            )}
+            <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total amassed · {t.currency}</p>
+            <Money
+              amountMinor={t.totalMinor - (earmarkedByCurrency.get(t.currency) ?? 0)}
+              currency={t.currency}
+              className="text-2xl font-bold text-fg"
+            />
+            <p className="mt-1 text-xs text-fg-subtle">
+              <Money amountMinor={t.totalMinor} currency={t.currency} /> held ·{' '}
+              <Money amountMinor={earmarkedByCurrency.get(t.currency) ?? 0} currency={t.currency} /> earmarked
+            </p>
           </div>
         ))}
       </div>
