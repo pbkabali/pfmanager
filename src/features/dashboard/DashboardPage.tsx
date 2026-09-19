@@ -83,7 +83,7 @@ export function DashboardPage() {
         title={firstName ? `Hello, ${firstName}` : 'Dashboard'}
         subtitle={`${monthLabel()}${fromCache ? ' · showing saved copy' : ''}`}
         action={
-          <Link to="/transactions" className="rounded-md bg-accent px-4 py-2 text-sm font-bold text-accent-fg">
+          <Link to="/transactions?add" className="rounded-md bg-accent px-4 py-2 text-sm font-bold text-accent-fg">
             + Add
           </Link>
         }
