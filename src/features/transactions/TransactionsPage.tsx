@@ -35,7 +35,13 @@ export function TransactionsPage() {
 
       {adding && (
         <div className="mb-6">
-          <TransactionForm />
+          <TransactionForm
+            onSaved={() => {
+              // Back to the list, with the new row in view at the top.
+              setAdding(false)
+              window.scrollTo({ top: 0 })
+            }}
+          />
         </div>
       )}
 
