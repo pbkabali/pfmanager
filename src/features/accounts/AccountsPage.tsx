@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useUser } from '../../app/providers/useAuth'
 import { Money } from '../../components/Money'
@@ -69,9 +70,12 @@ export function AccountsPage() {
                   {meta?.icon ?? '▤'}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-fg">{a.name}</p>
+                  <Link to={`/accounts/${a.id}`} className="block truncate text-sm font-semibold text-fg hover:underline">
+                    {a.name}
+                  </Link>
                   <p className="text-xs text-fg-subtle">
                     {meta?.label ?? a.type} · {currency}
+                    {a.committed && ' · committed'}
                     {a.archived && ' · archived'}
                   </p>
                 </div>
@@ -98,6 +102,7 @@ function NewAccountForm({ defaultCurrency, onSaved }: { defaultCurrency: string;
   const [type, setType] = useState<AccountType>('mobile_money')
   const [currency, setCurrency] = useState(defaultCurrency)
   const [opening, setOpening] = useState('')
+  const [committed, setCommitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Offer the profile's currency even if it is not in the fixed list.
@@ -116,7 +121,7 @@ function NewAccountForm({ defaultCurrency, onSaved }: { defaultCurrency: string;
       setError('Give the account a name.')
       return
     }
-    void createAccount(user.uid, { name: name.trim(), type, currency, openingBalanceMinor })
+    void createAccount(user.uid, { name: name.trim(), type, currency, openingBalanceMinor, committed })
     onSaved()
   }
 
@@ -167,6 +172,15 @@ function NewAccountForm({ defaultCurrency, onSaved }: { defaultCurrency: string;
           />
         </label>
       </div>
+      <label className="flex items-start gap-2 text-sm text-fg-muted">
+        <input type="checkbox" checked={committed} onChange={(e) => setCommitted(e.target.checked)} className="mt-1" />
+        <span>
+          Committed money
+          <span className="block text-xs text-fg-subtle">
+            Promised to someone else, like a tithe or parents account. Left out of the monthly budget.
+          </span>
+        </span>
+      </label>
       <p className="text-xs text-fg-subtle">
         The currency is fixed once the account exists. Money changes currency by moving between accounts.
       </p>

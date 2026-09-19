@@ -7,6 +7,7 @@ import { signOut } from '../../lib/firebase/auth'
 import { db, userDocPath } from '../../lib/firebase/db'
 import { useProfile } from '../profile/profileContext'
 import { budgetCapPercent, CURRENCIES } from '../profile/types'
+import { SetAsidesSection } from '../setAsides/SetAsidesSection'
 
 const label = 'text-xs font-semibold tracking-wide text-fg-muted uppercase'
 
@@ -74,6 +75,8 @@ export function SettingsPage() {
             accounts when you fund it.
           </p>
         </section>
+
+        <SetAsidesSection />
 
         <section className="rounded-lg border border-edge bg-surface p-4">
           <p className={label}>Appearance</p>

@@ -28,6 +28,13 @@ export type Account = {
   currency?: string
   /** Balance before any recorded transaction, in minor units of `currency`. */
   openingBalanceMinor: number
+  /**
+   * Money already promised to someone else -- a tithe or parents account.
+   * Still an ordinary account with a derived balance, but left out of the
+   * monthly budget's cap base and funding sources, since it is not yours to
+   * plan with.
+   */
+  committed?: boolean
   archived: boolean
   createdAt: Timestamp | null
 }

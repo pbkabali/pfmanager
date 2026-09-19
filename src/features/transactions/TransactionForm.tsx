@@ -12,9 +12,10 @@ import { useMonthStatus } from '../budgets/useBudget'
 import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
 import { CURRENCIES } from '../profile/types'
+import { isActionable, setAsideLines, type SetAsideLine } from '../setAsides/rules'
 import { fromDateInputValue, toDateInputValue } from './periods'
 import type { TransactionType } from './types'
-import { createIncome, createTransaction } from './useTransactions'
+import { createIncome, createTransaction, type SetAsideTransfer } from './useTransactions'
 
 const TYPES: { value: TransactionType; label: string }[] = [
   { value: 'expense', label: 'Spent' },
@@ -48,7 +49,8 @@ function newPart(accountId = ''): Part {
  */
 export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
   const user = useUser()
-  const { currency: profileCurrency } = useProfile()
+  const profile = useProfile()
+  const { currency: profileCurrency } = profile
   const online = useOnlineStatus()
   const { active: accounts } = useAccounts()
   const { categories } = useCategories()
@@ -61,6 +63,8 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
   const [toAccountId, setToAccountId] = useState('')
   const [toAmount, setToAmount] = useState('')
   const [parts, setParts] = useState<Part[]>(() => [newPart()])
+  // Set-aside lines the person unticked for this entry, keyed `${part.key}:${rule.id}`.
+  const [skipped, setSkipped] = useState<Set<string>>(() => new Set())
   const [categoryId, setCategoryId] = useState('')
   const [date, setDate] = useState(() => toDateInputValue(new Date()))
   const [note, setNote] = useState('')
@@ -115,6 +119,26 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
     return { ...p, accountId: free?.id ?? '' }
   })
 
+  // What each rule would move for each part, recomputed as amounts are typed.
+  const linesByPart = new Map<number, SetAsideLine[]>()
+  if (type === 'income') {
+    for (const p of resolvedParts) {
+      const currency = currencyOf(p.accountId)
+      const amountMinor = parseAmount(p.amount, currency) ?? 0
+      linesByPart.set(p.key, setAsideLines(profile.setAsides, { accountId: p.accountId, currency, amountMinor }))
+    }
+  }
+
+  function toggleSkipped(partKey: number, ruleId: string) {
+    setSkipped((prev) => {
+      const next = new Set(prev)
+      const k = `${partKey}:${ruleId}`
+      if (next.has(k)) next.delete(k)
+      else next.add(k)
+      return next
+    })
+  }
+
   function updatePart(key: number, patch: Partial<Part>) {
     setParts((ps) => ps.map((p) => (p.key === key ? { ...p, ...patch } : p)))
   }
@@ -125,6 +149,7 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
     setAccountAmount('')
     setNote('')
     setParts([newPart()])
+    setSkipped(new Set())
   }
 
   function fail(message: string) {
@@ -165,7 +190,20 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
         }
         saved.push({ accountId: p.accountId, currency, amountMinor })
       }
-      createIncome(user.uid, shared, saved).catch(report)
+      const transfers: SetAsideTransfer[] = []
+      for (const p of resolvedParts) {
+        for (const line of linesByPart.get(p.key) ?? []) {
+          if (!isActionable(line) || skipped.has(`${p.key}:${line.rule.id}`)) continue
+          transfers.push({
+            setAsideId: line.rule.id,
+            accountId: p.accountId,
+            toAccountId: line.toAccountId,
+            currency: currencyOf(p.accountId),
+            amountMinor: line.amountMinor,
+          })
+        }
+      }
+      createIncome(user.uid, shared, saved, transfers).catch(report)
       reset()
       onSaved?.()
       return
@@ -247,6 +285,9 @@ export function TransactionForm({ onSaved }: { onSaved?: () => void }) {
           parts={resolvedParts}
           accounts={accounts}
           currencyOf={currencyOf}
+          linesByPart={linesByPart}
+          skipped={skipped}
+          onToggleSkipped={toggleSkipped}
           onChange={updatePart}
           onAdd={() => setParts((ps) => [...ps, newPart()])}
           onRemove={(key) => setParts((ps) => (ps.length > 1 ? ps.filter((p) => p.key !== key) : ps))}
@@ -439,6 +480,9 @@ function IncomeParts({
   parts,
   accounts,
   currencyOf,
+  linesByPart,
+  skipped,
+  onToggleSkipped,
   onChange,
   onAdd,
   onRemove,
@@ -446,10 +490,14 @@ function IncomeParts({
   parts: Part[]
   accounts: Account[]
   currencyOf: (accountId: string) => string
+  linesByPart: Map<number, SetAsideLine[]>
+  skipped: Set<string>
+  onToggleSkipped: (partKey: number, ruleId: string) => void
   onChange: (key: number, patch: Partial<Part>) => void
   onAdd: () => void
   onRemove: (key: number) => void
 }) {
+  const accountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? '?'
   const single = parts.length === 1
   const canAdd = parts.length < accounts.length
 
@@ -496,6 +544,40 @@ function IncomeParts({
               ✕
             </button>
           )}
+          {(linesByPart.get(p.key)?.length ?? 0) > 0 && (
+            <ul className={`space-y-1 text-xs ${single ? '' : 'col-span-2 sm:order-4 sm:col-span-3'}`}>
+              {(linesByPart.get(p.key) ?? []).map((line) => {
+                const key = `${p.key}:${line.rule.id}`
+                const actionable = isActionable(line)
+                return (
+                  <li key={line.rule.id} className="flex items-center gap-2 text-fg-muted">
+                    {actionable ? (
+                      <label className="flex flex-1 items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!skipped.has(key)}
+                          onChange={() => onToggleSkipped(p.key, line.rule.id)}
+                        />
+                        <span className={skipped.has(key) ? 'line-through opacity-60' : ''}>
+                          {line.rule.name} {formatShareLabel(line.rule.shareBp)}:{' '}
+                          <Money amountMinor={line.amountMinor} currency={currencyOf(p.accountId)} /> to{' '}
+                          {accountName(line.toAccountId)}
+                        </span>
+                      </label>
+                    ) : line.selfDirected ? (
+                      <span className="opacity-70">
+                        {line.rule.name}: skipped, this already goes into {accountName(p.accountId)}
+                      </span>
+                    ) : !line.toAccountId ? (
+                      <span className="opacity-70">
+                        {line.rule.name}: no {currencyOf(p.accountId)} account set, nothing will move
+                      </span>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       ))}
       {canAdd && (
@@ -505,4 +587,8 @@ function IncomeParts({
       )}
     </fieldset>
   )
+}
+
+function formatShareLabel(bp: number): string {
+  return `${(bp / 100).toFixed(2).replace(/\.?0+$/, '')}%`
 }

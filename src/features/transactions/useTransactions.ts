@@ -112,26 +112,42 @@ export function createTransaction(uid: string, input: TransactionInput) {
   })
 }
 
+export type SetAsideTransfer = {
+  setAsideId: string
+  accountId: string
+  toAccountId: string
+  currency: string
+  amountMinor: number
+}
+
 /**
  * One income, landing in several accounts: one transaction per part, written
  * as a single batch so a person never sees half a salary. All parts share a
  * generated groupId plus the date, category and note; each carries its own
  * account, currency and amount. A single-part income goes through here too
  * and simply gets no groupId.
+ *
+ * Set-asides ride in the same batch as transfers out of the receiving account:
+ * the income is recorded in full, then the promised slice moves. The ledger
+ * says what happened; the tag says why.
  */
 export function createIncome(
   uid: string,
   shared: Pick<TransactionInput, 'categoryId' | 'date' | 'note'>,
   parts: { accountId: string; currency: string; amountMinor: number }[],
+  setAsides: SetAsideTransfer[] = [],
 ) {
   const col = collection(db, userPath(uid, userCollections.transactions))
-  const groupId = parts.length > 1 ? doc(col).id : undefined
+  const groupId = parts.length + setAsides.length > 1 ? doc(col).id : undefined
   const batch = writeBatch(db)
+  const stamps = { createdAt: serverTimestamp(), updatedAt: serverTimestamp() }
   for (const part of parts) {
+    batch.set(doc(col), { ...clean({ type: 'income' as const, ...shared, ...part, groupId }), ...stamps })
+  }
+  for (const s of setAsides) {
     batch.set(doc(col), {
-      ...clean({ type: 'income' as const, ...shared, ...part, groupId }),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      ...clean({ type: 'transfer' as const, ...s, date: shared.date, note: '', groupId }),
+      ...stamps,
     })
   }
   return batch.commit()

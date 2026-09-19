@@ -43,7 +43,7 @@ export function FundBudgetForm({
   const { active: accounts } = useAccounts()
   const { transactions: allTransactions } = useTransactions({ max: 10000 })
   const eligible = useMemo(
-    () => accounts.filter((a) => accountCurrency(a, currency) === currency),
+    () => accounts.filter((a) => accountCurrency(a, currency) === currency && !a.committed),
     [accounts, currency],
   )
   const balances = useMemo(() => computeBalances(accounts, allTransactions), [accounts, allTransactions])
@@ -161,6 +161,7 @@ export function FundBudgetForm({
           <dd className="text-xs text-fg-subtle">
             {capPercent}% of <Money amountMinor={poolMinor} currency={currency} /> across {eligible.length}{' '}
             {currency} account{eligible.length === 1 ? '' : 's'}
+            {accounts.some((a) => a.committed) && ', committed accounts left out'}
           </dd>
         </div>
         <div className={`rounded-md p-3 ${overCap ? 'bg-danger/10' : 'bg-surface-raised'}`}>
