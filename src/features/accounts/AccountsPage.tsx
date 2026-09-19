@@ -102,13 +102,17 @@ export function AccountsPage() {
                   </p>
                 </div>
                 <span className="flex-none text-right">
-                  <Money amountMinor={balances.get(a.id) ?? 0} currency={currency} className="text-sm font-semibold" />
+                  {/* Same reading as the tile: what is free to amass, then how it splits. */}
+                  <Money
+                    amountMinor={(balances.get(a.id) ?? 0) - (earmarks.get(a.id) ?? 0)}
+                    currency={currency}
+                    className="text-sm font-semibold"
+                  />
                   {(earmarks.get(a.id) ?? 0) > 0 && (
                     <span className="block text-xs text-fg-subtle">
-                      <Money amountMinor={earmarks.get(a.id) ?? 0} currency={currency} /> earmarked
+                      <Money amountMinor={balances.get(a.id) ?? 0} currency={currency} /> held
                       <span className="block">
-                        <Money amountMinor={(balances.get(a.id) ?? 0) - (earmarks.get(a.id) ?? 0)} currency={currency} />{' '}
-                        free
+                        <Money amountMinor={earmarks.get(a.id) ?? 0} currency={currency} /> earmarked
                       </span>
                     </span>
                   )}
