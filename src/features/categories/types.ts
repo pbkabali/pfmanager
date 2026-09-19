@@ -22,3 +22,10 @@ export type Category = {
    */
   daily?: boolean
 }
+
+/**
+ * The one expense category that is never part of the plan. Spending here is
+ * counted outside the budget and may be paid from any account, for the
+ * purchase that was always going to happen regardless of the month's plan.
+ */
+export const OUT_OF_BUDGET_CATEGORY_ID = 'out-of-budget'

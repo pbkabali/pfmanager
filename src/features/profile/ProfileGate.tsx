@@ -5,9 +5,9 @@ import { useUser } from '../../app/providers/useAuth'
 import { Loading } from '../../components/Loading'
 import { db, userDocPath } from '../../lib/firebase/db'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
-import { seedProfile } from './ensureProfile'
+import { seedProfile, upgradeProfile } from './ensureProfile'
 import { ProfileContext } from './profileContext'
-import type { Profile } from './types'
+import { PROFILE_SCHEMA_VERSION, type Profile } from './types'
 
 type State =
   | { status: 'loading' }
@@ -31,6 +31,7 @@ export function ProfileGate({ children }: { children: ReactNode }) {
   const online = useOnlineStatus()
   const [state, setState] = useState<State>({ status: 'loading' })
   const seeding = useRef(false)
+  const upgrading = useRef(false)
 
   useEffect(() => {
     return onSnapshot(
@@ -38,7 +39,16 @@ export function ProfileGate({ children }: { children: ReactNode }) {
       { includeMetadataChanges: true },
       (snap) => {
         if (snap.exists()) {
-          setState({ status: 'ready', profile: snap.data() as Profile })
+          const profile = snap.data() as Profile
+          setState({ status: 'ready', profile })
+          // Older profile: top up quietly in the background. Failure (offline)
+          // is not an error; the next online visit tries again.
+          if (!snap.metadata.fromCache && profile.schemaVersion < PROFILE_SCHEMA_VERSION && !upgrading.current) {
+            upgrading.current = true
+            upgradeProfile(user.uid, profile.schemaVersion).catch(() => {
+              upgrading.current = false
+            })
+          }
           return
         }
         if (snap.metadata.fromCache) {

@@ -48,7 +48,7 @@ export type Profile = {
   schemaVersion: number
 }
 
-export const PROFILE_SCHEMA_VERSION = 1
+export const PROFILE_SCHEMA_VERSION = 2
 
 /** Fallback for a brand-new profile; changeable in Settings. */
 export const DEFAULT_CURRENCY = 'UGX'

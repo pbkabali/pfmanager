@@ -117,7 +117,7 @@ export function BudgetPage() {
                 )}
               </p>
             </Tile>
-            <Tile label="Spent">
+            <Tile label="Already spent">
               <Money
                 amountMinor={status.spentMinor}
                 currency={budget.currency}
@@ -125,7 +125,7 @@ export function BudgetPage() {
                 className="text-xl font-bold"
               />
             </Tile>
-            <Tile label="Available">
+            <Tile label="Still available">
               <Money
                 amountMinor={status.availableMinor}
                 currency={budget.currency}
@@ -142,7 +142,7 @@ export function BudgetPage() {
               </p>
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs text-fg-subtle">Available</p>
+                  <p className="text-xs text-fg-subtle">Still available</p>
                   <Money
                     amountMinor={daily.availableMinor}
                     currency={budget.currency}

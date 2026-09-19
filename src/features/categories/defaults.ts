@@ -23,4 +23,5 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'shopping', name: 'Shopping', kind: 'expense', icon: '🛍️', archived: false, sortOrder: 18 },
   { id: 'savings', name: 'Savings & investments', kind: 'expense', icon: '🏦', archived: false, sortOrder: 19 },
   { id: 'other-expense', name: 'Other', kind: 'expense', icon: '•', archived: false, sortOrder: 20 },
+  { id: 'out-of-budget', name: 'Out of budget', kind: 'expense', icon: '🧾', archived: false, sortOrder: 99 },
 ]

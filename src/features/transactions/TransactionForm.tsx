@@ -2,8 +2,9 @@ import { Timestamp } from 'firebase/firestore'
 import { useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
+import { cancelButton } from '../../components/buttonStyles'
 import { Money } from '../../components/Money'
-import { parseAmount } from '../../lib/money'
+import { formatMoney, parseAmount } from '../../lib/money'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
 import { accountCurrency, type Account } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
@@ -83,23 +84,33 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
       profileCurrency,
     )
 
-  // Fall back to the first option so an untouched select still submits a value.
-  // For an expense, prefer an account in the expense's currency: paying a UGX
-  // bill from the UGX wallet is the common case and should need no extra field.
-  const preferredAccount =
-    type === 'expense' ? accounts.find((a) => accountCurrency(a, profileCurrency) === expenseCurrency) : undefined
-  const account = accountId || preferredAccount?.id || accounts[0]?.id || ''
-  const toAccount = toAccountId || accounts.find((a) => a.id !== account)?.id || ''
   const category = categoryOptions.some((c) => c.id === categoryId)
     ? categoryId
     : (categoryOptions[0]?.id ?? '')
-  const crossCurrency = type === 'transfer' && !!toAccount && currencyOf(account) !== currencyOf(toAccount)
-  const chargedInOtherCurrency = type === 'expense' && !!account && currencyOf(account) !== expenseCurrency
 
+  // The chosen category's standing in the month's budget, if it is a plan item.
   const item = type === 'expense' ? monthStatus.status?.items.find((i) => i.categoryId === category) : undefined
   const itemCurrency = monthStatus.budget?.currency ?? profileCurrency
   const itemIsDaily = !!item && !!categories.find((c) => c.id === item.categoryId)?.daily
   const daysLeft = daysRemaining(budgetMonth)
+
+  // Accounts an expense may be paid from. A plan item is paid from the money
+  // earmarked for it, so only the accounts the month was funded from are
+  // offered; any other category ("Out of budget" included) may use any account.
+  const sourceIds = new Set(monthStatus.budget?.sources.map((src) => src.accountId) ?? [])
+  const pool =
+    type === 'expense' && item && sourceIds.size > 0 ? accounts.filter((a) => sourceIds.has(a.id)) : accounts
+
+  // Fall back to the first option so an untouched select still submits a value.
+  // For an expense, prefer an account in the expense's currency: paying a UGX
+  // bill from the UGX wallet is the common case and should need no extra field.
+  const chosenAccount = pool.some((a) => a.id === accountId) ? accountId : ''
+  const preferredAccount =
+    type === 'expense' ? pool.find((a) => accountCurrency(a, profileCurrency) === expenseCurrency) : undefined
+  const account = chosenAccount || preferredAccount?.id || pool[0]?.id || ''
+  const toAccount = toAccountId || accounts.find((a) => a.id !== account)?.id || ''
+  const crossCurrency = type === 'transfer' && !!toAccount && currencyOf(account) !== currencyOf(toAccount)
+  const chargedInOtherCurrency = type === 'expense' && !!account && currencyOf(account) !== expenseCurrency
 
   // Currencies offered for an expense: the profile default first, then any an
   // account uses, then the standard list. Whatever the price tag said.
@@ -242,6 +253,24 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
         }
         accountAmountMinor = charged
       }
+      // A plan item cannot be spent past what it still has. Checked in the
+      // budget's currency: the price when priced in it, else what the account
+      // was charged when the account is in it. Otherwise there is no rate to
+      // compare with and the entry is allowed through.
+      if (item) {
+        const inBudget =
+          currency === itemCurrency
+            ? amountMinor
+            : accountAmountMinor !== undefined && currencyOf(account) === itemCurrency
+              ? accountAmountMinor
+              : null
+        if (inBudget !== null && inBudget > item.availableMinor) {
+          const name = categories.find((c) => c.id === item.categoryId)?.name ?? 'this item'
+          return fail(
+            `Only ${formatMoney(Math.max(item.availableMinor, 0), itemCurrency)} is still available for ${name} this month.`,
+          )
+        }
+      }
       createTransaction(user.uid, {
         type,
         amountMinor,
@@ -257,6 +286,24 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
     reset()
     onSaved?.()
   }
+
+  // Paid-from picker, placed after the category for expenses (the category
+  // decides which accounts are offered) and first for transfers.
+  const fromField = (
+    <label className="block">
+      <span className={label}>{type === 'expense' ? 'Paid from' : 'From'}</span>
+      <select value={account} onChange={(e) => setAccountId(e.target.value)} className={field}>
+        {pool.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name} · {accountCurrency(a, profileCurrency)}
+          </option>
+        ))}
+      </select>
+      {type === 'expense' && item && sourceIds.size > 0 && (
+        <span className="mt-1 block text-xs text-fg-subtle">Only accounts the month was funded from.</span>
+      )}
+    </label>
+  )
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-edge bg-surface p-4">
@@ -293,7 +340,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
           onRemove={(key) => setParts((ps) => (ps.length > 1 ? ps.filter((p) => p.key !== key) : ps))}
         />
       ) : type === 'expense' ? (
-        <div className="grid grid-cols-[1fr_auto] gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-end gap-2">
           <label className="block">
             <span className={label}>Amount</span>
             <input
@@ -340,18 +387,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {type !== 'income' && (
-          <label className="block">
-            <span className={label}>From</span>
-            <select value={account} onChange={(e) => setAccountId(e.target.value)} className={field}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} · {accountCurrency(a, profileCurrency)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        {type === 'transfer' && fromField}
 
         {type === 'transfer' ? (
           <>
@@ -400,7 +436,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
                 <span
                   className={`mt-1 block text-xs ${item.availableMinor < 0 ? 'text-negative-text' : 'text-fg-subtle'}`}
                 >
-                  {item.availableMinor < 0 ? 'Over by ' : 'Available this month: '}
+                  {item.availableMinor < 0 ? 'Over by ' : 'Still available this month: '}
                   <Money amountMinor={Math.abs(item.availableMinor)} currency={itemCurrency} />
                   {itemIsDaily && item.availableMinor > 0 && daysLeft > 0 && (
                     <>
@@ -415,6 +451,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
                 <span className="mt-1 block text-xs text-fg-subtle">No budget set for this month.</span>
               )}
             </label>
+            {fromField}
             {chargedInOtherCurrency && (
               <label className="block sm:col-span-2">
                 <span className={label}>Charged to account as ({currencyOf(account)})</span>
@@ -463,7 +500,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
           Save
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-md border border-edge px-4 py-2.5 text-sm text-fg-muted">
+          <button type="button" onClick={onCancel} className={cancelButton}>
             Cancel
           </button>
         )}
