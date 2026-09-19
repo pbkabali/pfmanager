@@ -32,6 +32,34 @@ export function allocate(totalMinor: number, shares: Record<string, number>): Re
   return out
 }
 
+/**
+ * How a month's money is divided, given what the previous month left.
+ *
+ * An item's own leftover stays with it, on top of its share. Leftovers from
+ * items that have since left the plan (share removed or archived) have no
+ * home, so they join the pool and are split by the shares like new money.
+ */
+export function planMonth(
+  fundedMinor: number,
+  shares: Record<string, number>,
+  leftovers: Record<string, number>,
+): { carriedMinor: number; carriedByItem: Record<string, number>; allocations: Record<string, number> } {
+  const carriedByItem: Record<string, number> = {}
+  let pooled = 0
+  let carriedMinor = 0
+  for (const [id, left] of Object.entries(leftovers)) {
+    if (left <= 0) continue
+    carriedMinor += left
+    if ((shares[id] ?? 0) > 0) carriedByItem[id] = left
+    else pooled += left
+  }
+  const allocations = allocate(fundedMinor + pooled, shares)
+  for (const [id, left] of Object.entries(carriedByItem)) {
+    allocations[id] = (allocations[id] ?? 0) + left
+  }
+  return { carriedMinor, carriedByItem, allocations }
+}
+
 export function sharesTotal(shares: Record<string, number>): number {
   return Object.values(shares).reduce((sum, bp) => sum + bp, 0)
 }

@@ -23,12 +23,23 @@ export type Budget = {
   currency: string
   /** Fresh money earmarked for this month. This is what the cap limits. */
   fundedMinor: number
-  /** Unspent balances left over from the previous month, taken at funding. */
+  /** Everything left unspent by the previous month, taken at funding. */
   carriedMinor: number
+  /**
+   * The part of `carriedMinor` that stayed with its own item: categoryId ->
+   * minor units, for items still in the plan. It sits on top of that item's
+   * share. Whatever is not listed here came from items that had left the
+   * plan and went into the shared pool, split by the shares like new money.
+   * Absent on budgets funded before carry-over was per item (all pooled).
+   */
+  carriedByItem?: Record<string, number>
   sources: BudgetSource[]
   /** categoryId -> basis points, as the plan stood when funded. */
   shares: Record<string, number>
-  /** categoryId -> minor units. Sums exactly to fundedMinor + carriedMinor. */
+  /**
+   * categoryId -> minor units: the item's share of the pool plus its own
+   * carry-over. Sums exactly to fundedMinor + carriedMinor.
+   */
   allocations: Record<string, number>
   /** The cap in force when funded, for the record. */
   capPercent: number
