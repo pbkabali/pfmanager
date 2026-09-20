@@ -27,7 +27,7 @@ export function saveSetAsides(
       const ref = doc(accounts)
       batch.set(ref, {
         name: d.name,
-        type: 'savings',
+        type: 'set_aside',
         currency: d.currency,
         openingBalanceMinor: 0,
         committed: true,

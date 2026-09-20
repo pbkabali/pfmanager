@@ -10,7 +10,7 @@ import { useProfile } from '../profile/profileContext'
 import { TransactionRow } from '../transactions/TransactionRow'
 import { deleteTransaction, useTransactions } from '../transactions/useTransactions'
 import { computeBalances } from './balances'
-import { ACCOUNT_TYPES, accountCurrency } from './types'
+import { accountCurrency, accountMeta } from './types'
 import { setAccountArchived, setAccountCommitted, useAccounts } from './useAccounts'
 
 /**
@@ -47,7 +47,7 @@ export function AccountPage() {
     )
   }
 
-  const meta = ACCOUNT_TYPES.find((t) => t.value === account?.type)
+  const meta = account ? accountMeta(account) : undefined
 
   return (
     <>
@@ -56,7 +56,6 @@ export function AccountPage() {
         subtitle={[
           meta?.label ?? account?.type,
           currency,
-          account?.committed && 'committed',
           account?.archived && 'archived',
           fromCache && 'showing saved copy',
         ]
