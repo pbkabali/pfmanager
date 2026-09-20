@@ -194,7 +194,7 @@ function RuleForm({ rule, existing, onClose }: { rule: SetAside | null; existing
                   {options.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
-                      {a.committed ? ' · committed' : ''}
+                      {a.committed ? ' · set-aside' : ''}
                     </option>
                   ))}
                   <option value={CREATE}>+ New "{name.trim() || 'Set-aside'} ({cur})" account</option>
