@@ -10,7 +10,7 @@ export const ACCOUNT_TYPES: { value: AccountType; label: string; icon: string }[
   { value: 'bank', label: 'Bank account', icon: '🏦' },
   { value: 'card', label: 'Card', icon: '💳' },
   { value: 'savings', label: 'Savings', icon: '💰' },
-  { value: 'set_aside', label: 'Set-aside', icon: '🤲' },
+  { value: 'set_aside', label: 'Set-aside', icon: '💰' },
   { value: 'other', label: 'Other', icon: '▤' },
 ]
 
