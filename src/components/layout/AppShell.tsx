@@ -4,14 +4,8 @@ import { Brand } from '../Brand'
 import { InstallPrompt } from '../InstallPrompt'
 import { OfflineBanner } from '../OfflineBanner'
 import { ThemeToggle } from '../ThemeToggle'
-
-const navItems = [
-  { to: '/', label: 'Home', icon: '⌂', end: true },
-  { to: '/transactions', label: 'Activity', icon: '≡', end: false },
-  { to: '/budget', label: 'Budget', icon: '◎', end: false },
-  { to: '/accounts', label: 'Accounts', icon: '▤', end: false },
-  { to: '/settings', label: 'Settings', icon: '⚙', end: false },
-]
+import { navItems } from './nav'
+import { SwipeNavigation } from './SwipeNavigation'
 
 /**
  * App chrome that adapts to the screen rather than picking a side.
@@ -21,11 +15,13 @@ const navItems = [
  *   a laptop -- the content area gets the full height for charts and tables.
  *
  * Both render the same navItems so a route is never reachable on one form
- * factor and missing on the other.
+ * factor and missing on the other. On a phone in portrait, swiping left or
+ * right moves through the same list.
  */
 export function AppShell() {
   return (
     <div className="flex min-h-dvh flex-col overscroll-none-y md:flex-row">
+      <SwipeNavigation />
       {/* ---- Sidebar (desktop) ---- */}
       <aside className="hidden w-56 flex-none flex-col border-r border-edge bg-surface md:flex">
         <div className="px-5 py-5">

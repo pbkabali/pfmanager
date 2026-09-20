@@ -10,7 +10,7 @@ import { useProfile } from '../profile/profileContext'
 import { CURRENCIES } from '../profile/types'
 import { useTransactions } from '../transactions/useTransactions'
 import { computeBalances, totalsByCurrency } from './balances'
-import { ACCOUNT_TYPES, accountCurrency, type AccountType } from './types'
+import { ACCOUNT_TYPES, accountCurrency, accountMeta, type AccountType } from './types'
 import { createAccount, setAccountArchived, useAccounts } from './useAccounts'
 
 const field = 'mt-1 w-full rounded-md border border-edge bg-bg px-3 py-2 text-fg'
@@ -100,20 +100,19 @@ export function AccountsPage() {
       ) : (
         <ul className="divide-y divide-edge rounded-lg border border-edge bg-surface px-4">
           {accounts.map((a) => {
-            const meta = ACCOUNT_TYPES.find((t) => t.value === a.type)
+            const meta = accountMeta(a)
             const currency = accountCurrency(a, profileCurrency)
             return (
               <li key={a.id} className={`flex items-center gap-3 py-3 ${a.archived ? 'opacity-50' : ''}`}>
                 <span aria-hidden className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-surface-raised text-lg">
-                  {meta?.icon ?? '▤'}
+                  {meta.icon}
                 </span>
                 <div className="min-w-0 flex-1">
                   <Link to={`/accounts/${a.id}`} className="block truncate text-sm font-semibold text-fg hover:underline">
                     {a.name}
                   </Link>
                   <p className="text-xs text-fg-subtle">
-                    {meta?.label ?? a.type} · {currency}
-                    {a.committed && ' · committed'}
+                    {meta.label} · {currency}
                     {a.archived && ' · archived'}
                   </p>
                 </div>

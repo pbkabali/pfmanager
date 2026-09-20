@@ -186,7 +186,10 @@ deep links open cold.
 **Mobile and desktop.** One `AppShell`, two layouts: a fixed bottom tab bar on
 phones (thumb reach, safe-area aware) and a left sidebar from `md` up so the
 dashboard gets the full height for charts and tables. Both render the same
-nav items, so a route cannot exist on one form factor and not the other.
+nav items, so a route cannot exist on one form factor and not the other. In
+portrait on a phone, a horizontal swipe moves to the next or previous
+section in tab order; it yields to forms, inputs, horizontally scrolling
+elements and the OS edge gesture.
 
 **Money is legible.** Amounts use `font-variant-numeric: tabular-nums` so
 columns line up. Income is `positive-text`, spending is `negative-text`.
