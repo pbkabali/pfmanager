@@ -14,8 +14,9 @@ let nextKey = 1
 
 /**
  * Select the whole value when a share field gains focus, so a new figure
- * simply replaces the old one. iOS otherwise parks the caret at the start.
- * Deferred a tick: Safari on iOS undoes a synchronous select() on focus.
+ * simply replaces the old one. The field is right-aligned, so most of it is
+ * empty space before the digits and a tap there lands the caret in front of
+ * them. Deferred a tick: Safari on iOS undoes a synchronous select() on focus.
  */
 function selectAllOnFocus(event: React.FocusEvent<HTMLInputElement>) {
   const input = event.currentTarget
