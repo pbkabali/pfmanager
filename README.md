@@ -48,7 +48,7 @@ that is deliberate.
 | `npm run preview` | Serve the production build locally, service worker enabled |
 | `npm run lint` | oxlint |
 | `npm run check:contrast` | WCAG audit of both themes. Run after any colour change |
-| `npm run make:icons` | Regenerate the PNG app icons from the logo geometry. Run after changing `favicon.svg` |
+| `npm run make:icons` | Regenerate `favicon.svg` and the PNG app icons from the artwork in the script (macOS, uses Quick Look) |
 | `npm run setup:hooks` | Point git at `.githooks/` |
 
 ## Layout
@@ -201,8 +201,9 @@ applied before first paint by the inline script in `index.html`.
 
 ### Rebranding
 
-Edit **`src/styles/palette.css`** and nothing else, then run
-`npm run check:contrast`. It mirrors the palette values (keep them in step)
+Colours: edit **`src/styles/palette.css`** and nothing else, then run
+`npm run check:contrast`. App icon: edit the artwork in
+`scripts/make-icons.mjs` and run `npm run make:icons`. It mirrors the palette values (keep them in step)
 and checks every role against the page *and* the card surface, in both
 themes. The green fill and the red fill were both darkened during setup for
 exactly the failures it exists to catch.
