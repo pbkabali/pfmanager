@@ -1,148 +1,100 @@
 #!/usr/bin/env node
 /*
- * Regenerate the PNG app icons from the logo geometry.
+ * Regenerate the favicon and the PNG app icons from one piece of artwork.
  *
  *   node scripts/make-icons.mjs
  *
- * Why this exists: the icons were once rendered by dropping the 64px SVG into
- * the corner of a larger transparent canvas, which iOS shows as a tiny logo on
- * a white tile. This machine has no SVG rasteriser and the project has no
- * image dependency, so the logo -- three rounded bars on a dark square -- is
- * drawn here directly and encoded with Node's built-in zlib.
+ * The ART below is the single source of truth: a money bag with a dollar
+ * sign, wrapped by two arcs like parentheses -- the left one rising to point
+ * up and right, the right one falling to point down and left -- all in the
+ * brand green on the dark ground. The script writes public/favicon.svg from it and
+ * rasterises the PNGs with macOS Quick Look (`qlmanage`), which is the one
+ * SVG renderer this machine has without adding an image dependency. On
+ * another OS, install librsvg and swap the render() call for rsvg-convert.
  *
- * Keep the GEOMETRY below in step with public/favicon.svg; it is the same
- * shapes in the same 64-unit box.
- *
- * Every icon is OPAQUE and full-bleed:
+ * Every PNG is OPAQUE and full-bleed:
  *  - iOS ignores alpha and rounds the corners itself, so the touch icon must
  *    be a plain filled square or the platform paints white behind it.
  *  - Android adaptive icons crop the maskable icon to a circle or squircle,
- *    so its artwork sits inside the central 80% safe zone.
+ *    so its artwork is pulled into the central 80% safe zone.
  */
-import { writeFileSync } from 'node:fs'
-import { deflateSync } from 'node:zlib'
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-// ---- geometry: mirrors public/favicon.svg -----------------------------------
 const BOX = 64
 const BACKGROUND = '#0b0b0c'
-const BARS = [
-  { x: 12, y: 36, w: 10, h: 16, r: 2, fill: '#4b4f57' },
-  { x: 27, y: 26, w: 10, h: 26, r: 2, fill: '#9598a1' },
-  { x: 42, y: 12, w: 10, h: 40, r: 2, fill: '#16a34a' },
-]
+
+/** Artwork in a 64-unit box, background excluded. */
+const GREEN = '#16a34a'
+const ART = `
+  <!-- Left parenthesis: from lower-left up round the bag's side to upper-left,
+       head following the arc. The right one is the same, turned 180 degrees. -->
+  <path d="M19.4 51.0 A 22 22 0 0 1 19.4 15.0" stroke="${GREEN}" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <g transform="translate(19.4 15.0) rotate(-35.0)">
+    <path d="M-5.5 -5 L0.5 0 L-5.5 5" stroke="${GREEN}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g transform="rotate(180 32 33)">
+    <path d="M19.4 51.0 A 22 22 0 0 1 19.4 15.0" stroke="${GREEN}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <g transform="translate(19.4 15.0) rotate(-35.0)">
+      <path d="M-5.5 -5 L0.5 0 L-5.5 5" stroke="${GREEN}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+  <!-- Money bag: body, tuft, tie, dollar sign. Drawn slightly smaller than the
+       arcs allow so the arrowheads never touch it. -->
+  <g transform="translate(32 33) scale(0.98) translate(-32 -36)">
+  <path d="M32 25 C 23 25, 18 32.5, 18 39.5 C 18 46, 24.5 48.5, 32 48.5 C 39.5 48.5, 46 46, 46 39.5 C 46 32.5, 41 25, 32 25 Z" fill="${GREEN}"/>
+  <path d="M27.5 25 L 36.5 25 L 38.5 20.5 L 35 21.7 L 32 18.5 L 29 21.7 L 25.5 20.5 Z" fill="${GREEN}"/>
+  <rect x="26.7" y="23.8" width="10.6" height="2.6" rx="1.3" fill="${BACKGROUND}"/>
+  <text x="32" y="43" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="800" font-size="15.5" fill="${BACKGROUND}">$</text>
+  </g>
+`
 
 const OUTPUTS = [
   { file: 'public/icons/apple-touch-icon.png', size: 180, artScale: 1 },
   { file: 'public/icons/icon-192.png', size: 192, artScale: 1 },
   { file: 'public/icons/icon-512.png', size: 512, artScale: 1 },
-  // Bars shrunk towards the centre so a circular mask cannot clip them.
-  { file: 'public/icons/icon-512-maskable.png', size: 512, artScale: 0.72 },
+  { file: 'public/icons/icon-512-maskable.png', size: 512, artScale: 0.8 },
 ]
 
-/** Samples per axis per pixel; 4x4 gives clean edges at every size here. */
-const SUPERSAMPLE = 4
+/** Quick Look renders small SVGs inconsistently; always draw big, then resample. */
+const RENDER_SIZE = 1024
 
-// ---- drawing -------------------------------------------------------------------
-function hex(colour) {
-  const n = parseInt(colour.slice(1), 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-
-function insideRoundedRect(px, py, { x, y, w, h, r }) {
-  if (px < x || px > x + w || py < y || py > y + h) return false
-  // Corner test: outside the quarter circle at each corner means outside.
-  const cx = px < x + r ? x + r : px > x + w - r ? x + w - r : px
-  const cy = py < y + r ? y + r : py > y + h - r ? y + h - r : py
-  return (px - cx) ** 2 + (py - cy) ** 2 <= r * r
-}
-
-function render({ size, artScale }) {
-  const bg = hex(BACKGROUND)
-  const bars = BARS.map((b) => ({ ...b, rgb: hex(b.fill) }))
-  const pixels = Buffer.alloc(size * size * 3)
-  const step = 1 / SUPERSAMPLE
+/** The full SVG document, optionally with rounded corners and shrunken art. */
+function svg({ width, radius = 0, artScale = 1 }) {
   const half = BOX / 2
+  const transform =
+    artScale === 1 ? '' : ` transform="translate(${half} ${half}) scale(${artScale}) translate(${-half} ${-half})"`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BOX} ${BOX}" width="${width}" height="${width}">
+  <rect width="${BOX}" height="${BOX}" rx="${radius}" fill="${BACKGROUND}"/>
+  <g${transform}>${ART}
+  </g>
+</svg>
+`
+}
 
-  for (let py = 0; py < size; py++) {
-    for (let px = 0; px < size; px++) {
-      let r = 0
-      let g = 0
-      let b = 0
-      for (let sy = 0; sy < SUPERSAMPLE; sy++) {
-        for (let sx = 0; sx < SUPERSAMPLE; sx++) {
-          // Pixel centre -> logo units, then pull towards the centre for the
-          // maskable safe zone.
-          let ux = ((px + (sx + 0.5) * step) / size) * BOX
-          let uy = ((py + (sy + 0.5) * step) / size) * BOX
-          ux = half + (ux - half) / artScale
-          uy = half + (uy - half) / artScale
-          let rgb = bg
-          for (const bar of bars) if (insideRoundedRect(ux, uy, bar)) rgb = bar.rgb
-          r += rgb[0]
-          g += rgb[1]
-          b += rgb[2]
-        }
-      }
-      const n = SUPERSAMPLE * SUPERSAMPLE
-      const i = (py * size + px) * 3
-      pixels[i] = Math.round(r / n)
-      pixels[i + 1] = Math.round(g / n)
-      pixels[i + 2] = Math.round(b / n)
+/** Rasterise an SVG string to PNG bytes at `size` px: Quick Look at 1024, sips down. */
+function render(svgText, size) {
+  const dir = mkdtempSync(join(tmpdir(), 'pfm-icons-'))
+  try {
+    const src = join(dir, 'icon.svg')
+    writeFileSync(src, svgText)
+    execFileSync('/usr/bin/qlmanage', ['-t', '-s', String(RENDER_SIZE), '-o', dir, src], { stdio: 'ignore' })
+    const big = join(dir, 'icon.svg.png')
+    if (size !== RENDER_SIZE) {
+      execFileSync('/usr/bin/sips', ['-z', String(size), String(size), big], { stdio: 'ignore' })
     }
+    return readFileSync(big)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
   }
-  return pixels
 }
 
-// ---- PNG encoding ----------------------------------------------------------------
-const CRC_TABLE = new Uint32Array(256).map((_, n) => {
-  let c = n
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
-  return c >>> 0
-})
+writeFileSync('public/favicon.svg', svg({ width: BOX, radius: 12 }))
+console.log('wrote public/favicon.svg')
 
-function crc32(buf) {
-  let c = 0xffffffff
-  for (const byte of buf) c = CRC_TABLE[(c ^ byte) & 255] ^ (c >>> 8)
-  return (c ^ 0xffffffff) >>> 0
-}
-
-function chunk(type, data) {
-  const len = Buffer.alloc(4)
-  len.writeUInt32BE(data.length)
-  const typeAndData = Buffer.concat([Buffer.from(type, 'ascii'), data])
-  const crc = Buffer.alloc(4)
-  crc.writeUInt32BE(crc32(typeAndData))
-  return Buffer.concat([len, typeAndData, crc])
-}
-
-function encodePng(size, rgb) {
-  const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
-  ihdr[8] = 8 // bit depth
-  ihdr[9] = 2 // colour type: truecolour, no alpha -- opaque on purpose
-  ihdr[10] = 0
-  ihdr[11] = 0
-  ihdr[12] = 0
-
-  // One filter byte (0 = none) in front of every scanline.
-  const stride = size * 3
-  const raw = Buffer.alloc((stride + 1) * size)
-  for (let y = 0; y < size; y++) {
-    raw[y * (stride + 1)] = 0
-    rgb.copy(raw, y * (stride + 1) + 1, y * stride, (y + 1) * stride)
-  }
-
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ])
-}
-
-// ---- go -----------------------------------------------------------------------------
 for (const out of OUTPUTS) {
-  writeFileSync(out.file, encodePng(out.size, render(out)))
+  writeFileSync(out.file, render(svg({ width: RENDER_SIZE, artScale: out.artScale }), out.size))
   console.log(`wrote ${out.file} (${out.size}x${out.size}${out.artScale !== 1 ? ', maskable safe zone' : ''})`)
 }
