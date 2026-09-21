@@ -203,7 +203,9 @@ applied before first paint by the inline script in `index.html`.
 
 Colours: edit **`src/styles/palette.css`** and nothing else, then run
 `npm run check:contrast`. App icon: edit the artwork in
-`scripts/make-icons.mjs` and run `npm run make:icons`. It mirrors the palette values (keep them in step)
+`scripts/make-icons.mjs`, run `npm run make:icons`, and bump the `?v=` on the
+icon URLs in `index.html` and `vite.config.ts`, or iOS keeps showing the old
+icon when adding to the home screen. It mirrors the palette values (keep them in step)
 and checks every role against the page *and* the card surface, in both
 themes. The green fill and the red fill were both darkened during setup for
 exactly the failures it exists to catch.
