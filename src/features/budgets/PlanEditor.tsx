@@ -7,7 +7,7 @@ import { savePlan, setCategoryArchived, type PlanEntry } from '../categories/use
 import { BP_TOTAL, formatPercent, parsePercent } from './allocate'
 
 
-type Draft = { percent: string; daily: boolean }
+type Draft = { name: string; icon: string; percent: string; daily: boolean }
 type NewItem = { key: number; name: string; icon: string; percent: string }
 
 let nextKey = 1
@@ -29,13 +29,17 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
   )
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
     Object.fromEntries(
-      items.map((c) => [c.id, { percent: c.shareBp ? formatPercent(c.shareBp) : '', daily: !!c.daily }]),
+      items.map((c) => [
+        c.id,
+        { name: c.name, icon: c.icon, percent: c.shareBp ? formatPercent(c.shareBp) : '', daily: !!c.daily },
+      ]),
     ),
   )
   const [added, setAdded] = useState<NewItem[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const draftFor = (c: Category): Draft => drafts[c.id] ?? { percent: '', daily: false }
+  const draftFor = (c: Category): Draft =>
+    drafts[c.id] ?? { name: c.name, icon: c.icon, percent: '', daily: false }
 
   const parsed = useMemo(() => {
     let total = 0
@@ -60,7 +64,9 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
   function setDaily(id: string) {
     setDrafts((d) => {
       const next: Record<string, Draft> = {}
-      for (const c of items) next[c.id] = { ...(d[c.id] ?? { percent: '', daily: false }), daily: c.id === id }
+      for (const c of items) {
+        next[c.id] = { ...(d[c.id] ?? { name: c.name, icon: c.icon, percent: '', daily: false }), daily: c.id === id }
+      }
       return next
     })
   }
@@ -73,7 +79,14 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
     const entries: Record<string, PlanEntry> = {}
     for (const c of items) {
       const d = draftFor(c)
-      entries[c.id] = { shareBp: d.percent.trim() === '' ? 0 : (parsePercent(d.percent) ?? 0), daily: d.daily }
+      const name = d.name.trim()
+      if (!name) return setError('Every item needs a name.')
+      entries[c.id] = {
+        name,
+        icon: d.icon.trim() || c.icon,
+        shareBp: d.percent.trim() === '' ? 0 : (parsePercent(d.percent) ?? 0),
+        daily: d.daily,
+      }
     }
     const maxOrder = Math.max(0, ...categories.map((c) => c.sortOrder))
     const created = added
@@ -103,17 +116,26 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
         </p>
       </div>
       <p className="text-xs text-fg-subtle">
-        Each item takes its share of what is earmarked for the month. Mark one as daily to see its balance per day.
+        Each item takes its share of what is earmarked for the month. Rename an item here and past spending follows
+        it. Mark one as daily to see its balance per day.
       </p>
 
       <ul className="divide-y divide-edge">
         {items.map((c) => {
           const d = draftFor(c)
           return (
-            <li key={c.id} className="grid grid-cols-[1fr_5.5rem_auto_auto] items-center gap-2 py-2">
-              <span className="truncate text-sm text-fg">
-                {c.icon} {c.name}
+            <li key={c.id} className="grid grid-cols-[2.5rem_1fr_5.5rem_auto_auto] items-center gap-2 py-2">
+              <span aria-hidden className="text-center text-lg">
+                {c.icon}
               </span>
+              <input
+                type="text"
+                required
+                aria-label="Item name"
+                value={d.name}
+                onChange={(e) => setDrafts((all) => ({ ...all, [c.id]: { ...d, name: e.target.value } }))}
+                className="min-w-0 w-full rounded-md border border-edge bg-bg px-2 py-1.5 text-sm text-fg"
+              />
               <label className="block">
                 <span className="sr-only">Share of {c.name}</span>
                 <span className="flex items-center gap-1">
@@ -149,7 +171,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
           )
         })}
         {added.map((n) => (
-          <li key={n.key} className="grid grid-cols-[2.5rem_1fr_5.5rem_auto] items-center gap-2 py-2">
+          <li key={n.key} className="grid grid-cols-[2.5rem_1fr_5.5rem_auto_auto] items-center gap-2 py-2">
             <input
               type="text"
               aria-label="Icon"
@@ -181,6 +203,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
               />
               <span className="text-xs text-fg-subtle">%</span>
             </span>
+            <span aria-hidden className="w-10" />
             <button
               type="button"
               onClick={() => setAdded((all) => all.filter((x) => x.key !== n.key))}

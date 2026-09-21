@@ -47,7 +47,7 @@ export function useCategories(): CategoriesState {
  * Mutations. Not awaited by the UI when offline -- see useAccounts.ts.
  */
 
-export type PlanEntry = { shareBp: number; daily: boolean }
+export type PlanEntry = { name: string; icon: string; shareBp: number; daily: boolean }
 
 /**
  * Rewrite the monthly plan in one batch: every listed category gets its share
@@ -63,7 +63,7 @@ export function savePlan(
   const col = collection(db, userPath(uid, userCollections.categories))
   const batch = writeBatch(db)
   for (const [id, entry] of Object.entries(entries)) {
-    batch.update(doc(col, id), { shareBp: entry.shareBp, daily: entry.daily })
+    batch.update(doc(col, id), { name: entry.name, icon: entry.icon, shareBp: entry.shareBp, daily: entry.daily })
   }
   for (const c of created) {
     batch.set(doc(col), { ...c, kind: 'expense', archived: false })
