@@ -31,11 +31,11 @@ export function AccountsPage() {
     [accounts, balances, profileCurrency],
   )
   // What the budget has spoken for, per account and then per currency, so a
-  // total can be read as "this much is actually yours to amass, the rest is
-  // promised to the month".
+  // total can be read as "this much is untouched, the rest is promised to
+  // the month or to someone else".
   const earmarks = useEarmarks()
   // Committed accounts hold money promised to someone else (tithe, parents).
-  // It is held, but it is not amassed, so it comes out of the headline too.
+  // It is held, but it is not untouched, so it comes out of the headline too.
   const { earmarkedByCurrency, committedByCurrency } = useMemo(() => {
     const earmarkedByCurrency = new Map<string, number>()
     const committedByCurrency = new Map<string, number>()
@@ -71,7 +71,7 @@ export function AccountsPage() {
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(totals.length ? totals : [{ currency: profileCurrency, totalMinor: 0 }]).map((t) => (
           <div key={t.currency} className="rounded-lg border border-edge bg-surface p-4">
-            <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total amassed · {t.currency}</p>
+            <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Total untouched · {t.currency}</p>
             <Money
               amountMinor={
                 t.totalMinor -
@@ -117,7 +117,7 @@ export function AccountsPage() {
                   </p>
                 </div>
                 <span className="flex-none text-right">
-                  {/* Same reading as the tile: what is free to amass, then how it splits. */}
+                  {/* Same reading as the tile: what is untouched, then how it splits. */}
                   <Money
                     amountMinor={(balances.get(a.id) ?? 0) - (earmarks.get(a.id) ?? 0)}
                     currency={currency}
