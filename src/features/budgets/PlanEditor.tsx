@@ -13,6 +13,16 @@ type NewItem = { key: number; name: string; icon: string; percent: string }
 let nextKey = 1
 
 /**
+ * Select the whole value when a share field gains focus, so a new figure
+ * simply replaces the old one. iOS otherwise parks the caret at the start.
+ * Deferred a tick: Safari on iOS undoes a synchronous select() on focus.
+ */
+function selectAllOnFocus(event: React.FocusEvent<HTMLInputElement>) {
+  const input = event.currentTarget
+  setTimeout(() => input.select(), 0)
+}
+
+/**
  * The list of things a month's money is for, each with its share. Shares are
  * kept on the expense categories themselves, so recording spending against an
  * item is simply choosing its category. Saved as one batch; the month can
@@ -145,6 +155,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
                     placeholder="0"
                     aria-label={`Share for ${c.name}, percent`}
                     value={d.percent}
+                    onFocus={selectAllOnFocus}
                     onChange={(e) => setDrafts((all) => ({ ...all, [c.id]: { ...d, percent: e.target.value } }))}
                     className="w-full rounded-md border border-edge bg-bg px-2 py-1.5 text-right text-sm text-fg tabular"
                   />
@@ -196,6 +207,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
                 aria-label="Share, percent"
                 placeholder="0"
                 value={n.percent}
+                onFocus={selectAllOnFocus}
                 onChange={(e) =>
                   setAdded((all) => all.map((x) => (x.key === n.key ? { ...x, percent: e.target.value } : x)))
                 }
