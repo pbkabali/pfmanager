@@ -116,8 +116,8 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
         </p>
       </div>
       <p className="text-xs text-fg-subtle">
-        Each item takes its share of what is earmarked for the month. Rename or re-icon an item here; past spending
-        follows it. Mark one as daily to see its balance per day.
+        Each item takes its share of what is earmarked for the month. Rename an item here and past spending follows
+        it. Mark one as daily to see its balance per day.
       </p>
 
       <ul className="divide-y divide-edge">
@@ -125,13 +125,9 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
           const d = draftFor(c)
           return (
             <li key={c.id} className="grid grid-cols-[2.5rem_1fr_5.5rem_auto_auto] items-center gap-2 py-2">
-              <input
-                type="text"
-                aria-label={`Icon for ${c.name}`}
-                value={d.icon}
-                onChange={(e) => setDrafts((all) => ({ ...all, [c.id]: { ...d, icon: e.target.value } }))}
-                className="w-full rounded-md border border-edge bg-bg px-2 py-1.5 text-center text-sm text-fg"
-              />
+              <span aria-hidden className="text-center text-lg">
+                {c.icon}
+              </span>
               <input
                 type="text"
                 required
