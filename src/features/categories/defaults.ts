@@ -4,6 +4,22 @@ import type { Category } from './types'
  * Seeded into a new profile. Ids are fixed words rather than random so the
  * seed is idempotent -- re-running it on an existing profile overwrites the
  * same documents instead of duplicating them.
+ *
+ * Expense categories are DELIBERATELY not seeded beyond "Out of budget".
+ *
+ * A monthly plan is the one thing in this app that is entirely personal --
+ * what somebody's money is for, and in what proportion. Seeding a dozen
+ * opinionated items ("Leisure", "Shopping", "Education") meant a new profile
+ * opened its plan already full of somebody else's priorities, which read as
+ * though another account's items had leaked in. The plan now starts empty and
+ * is built with "+ Add an item".
+ *
+ * "Out of budget" stays because it is structural rather than opinionated:
+ * the code refers to it by id (OUT_OF_BUDGET_CATEGORY_ID) as the one place
+ * spending can go that the plan does not govern.
+ *
+ * Income categories stay for now because nothing in the UI can create one,
+ * so seeding none would leave a new profile unable to record income at all.
  */
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'salary', name: 'Salary', kind: 'income', icon: '💼', archived: false, sortOrder: 0 },
@@ -11,17 +27,5 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'gifts-in', name: 'Gifts received', kind: 'income', icon: '🎁', archived: false, sortOrder: 2 },
   { id: 'other-income', name: 'Other income', kind: 'income', icon: '➕', archived: false, sortOrder: 3 },
 
-  { id: 'daily', name: 'Daily expenses', kind: 'expense', icon: '☀️', archived: false, sortOrder: 9, daily: true },
-  { id: 'food', name: 'Food & groceries', kind: 'expense', icon: '🍲', archived: false, sortOrder: 10 },
-  { id: 'transport', name: 'Transport', kind: 'expense', icon: '🚕', archived: false, sortOrder: 11 },
-  { id: 'housing', name: 'Rent & housing', kind: 'expense', icon: '🏠', archived: false, sortOrder: 12 },
-  { id: 'utilities', name: 'Utilities & airtime', kind: 'expense', icon: '💡', archived: false, sortOrder: 13 },
-  { id: 'health', name: 'Health', kind: 'expense', icon: '🩺', archived: false, sortOrder: 14 },
-  { id: 'education', name: 'Education', kind: 'expense', icon: '📚', archived: false, sortOrder: 15 },
-  { id: 'family', name: 'Family & giving', kind: 'expense', icon: '🤝', archived: false, sortOrder: 16 },
-  { id: 'leisure', name: 'Leisure', kind: 'expense', icon: '🎬', archived: false, sortOrder: 17 },
-  { id: 'shopping', name: 'Shopping', kind: 'expense', icon: '🛍️', archived: false, sortOrder: 18 },
-  { id: 'savings', name: 'Savings & investments', kind: 'expense', icon: '🏦', archived: false, sortOrder: 19 },
-  { id: 'other-expense', name: 'Other', kind: 'expense', icon: '•', archived: false, sortOrder: 20 },
   { id: 'out-of-budget', name: 'Out of budget', kind: 'expense', icon: '🧾', archived: false, sortOrder: 99 },
 ]
