@@ -6,7 +6,6 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signOut as firebaseSignOut,
   type Auth,
 } from 'firebase/auth'
 
@@ -51,6 +50,8 @@ export function resetPassword(email: string) {
   return sendPasswordResetEmail(auth, email)
 }
 
-export function signOut() {
-  return firebaseSignOut(auth)
-}
+/*
+ * No signOut() here on purpose. Signing out has to drop this account's parked
+ * session too, or it stays one tap away in the switcher -- see
+ * signOutAndForget() in sessions.ts, which is the only way out.
+ */

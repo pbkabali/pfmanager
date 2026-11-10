@@ -23,8 +23,15 @@ export function ProtectedRoute() {
 
   // Children only mount once the profile exists, so every screen inside can
   // rely on a currency and a set of categories being there.
+  //
+  // Keyed by uid so switching accounts tears the whole subtree down and
+  // builds it again. Without the key, React would reuse the mounted tree and
+  // every piece of state in it -- an open form, a chosen month, the profile
+  // ProfileGate still holds -- would belong to the account just left, showing
+  // one person's currency and figures under another's name until each
+  // listener happened to catch up.
   return (
-    <ProfileGate>
+    <ProfileGate key={user.uid}>
       <Outlet />
     </ProfileGate>
   )

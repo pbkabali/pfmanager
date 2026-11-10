@@ -3,8 +3,8 @@ import { doc, updateDoc } from 'firebase/firestore'
 import { useUser } from '../../app/providers/useAuth'
 import { PageHeader } from '../../components/PageHeader'
 import { ThemeToggle } from '../../components/ThemeToggle'
-import { signOut } from '../../lib/firebase/auth'
 import { db, userDocPath } from '../../lib/firebase/db'
+import { signOutAndForget } from '../../lib/firebase/sessions'
 import { useProfile } from '../profile/profileContext'
 import { budgetCapPercent, CURRENCIES } from '../profile/types'
 import { SetAsidesSection } from '../setAsides/SetAsidesSection'
@@ -87,13 +87,14 @@ export function SettingsPage() {
 
         <button
           type="button"
-          onClick={() => void signOut()}
+          onClick={() => void signOutAndForget()}
           className="w-full rounded-md border border-edge py-2.5 text-sm font-semibold text-danger-text"
         >
           Sign out
         </button>
         <p className="text-center text-xs text-fg-subtle">
-          Signing out clears nothing on the server. Signing back in needs a connection.
+          Signing out also forgets this account on this device, so it leaves the account switcher. Nothing
+          on the server changes. Signing back in needs a connection.
         </p>
       </div>
     </>

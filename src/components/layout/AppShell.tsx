@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
+import { AccountMenu } from '../../features/auth/AccountMenu'
 import { Brand } from '../Brand'
 import { InstallPrompt } from '../InstallPrompt'
 import { OfflineBanner } from '../OfflineBanner'
@@ -46,8 +47,11 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="px-5 py-4">
-          <ThemeToggle />
+        <div className="space-y-3 px-3 py-4">
+          <div className="px-2">
+            <ThemeToggle />
+          </div>
+          <AccountMenu placement="up" />
         </div>
       </aside>
 
@@ -57,7 +61,10 @@ export function AppShell() {
         {/* ---- Top bar (mobile only) ---- */}
         <header className="flex items-center justify-between border-b border-edge bg-surface px-4 py-3 md:hidden">
           <Brand />
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <AccountMenu placement="down" />
+          </div>
         </header>
 
         {/* pb-24 clears the fixed mobile tab bar. */}
