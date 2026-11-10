@@ -391,7 +391,14 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
         </label>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/*
+        [&>*]:min-w-0 is load-bearing. A grid item defaults to min-width:auto,
+        so it cannot shrink below its content -- and iOS reports a wide
+        min-content size for a native date control. The Date field grew past
+        its column and out through the right edge of the card; every other
+        field happened to be narrow enough to hide the problem.
+      */}
+      <div className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
         {type === 'transfer' && fromField}
 
         {type === 'transfer' ? (
@@ -479,7 +486,15 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
 
         <label className="block">
           <span className={label}>Date</span>
-          <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+          {/* min-w-0 again on the control itself: the date input carries its
+              own intrinsic minimum, which w-full alone does not override. */}
+          <input
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={`${field} min-w-0`}
+          />
         </label>
 
         <label className="block">
