@@ -8,7 +8,7 @@ import { BP_TOTAL, formatPercent, parsePercent } from './allocate'
 
 
 type Draft = { name: string; icon: string; percent: string; daily: boolean }
-type NewItem = { key: number; name: string; icon: string; percent: string }
+type NewItem = { key: number; name: string; icon: string; percent: string; daily: boolean }
 
 let nextKey = 1
 
@@ -72,13 +72,16 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
     return { total, invalid }
   }, [drafts, added, items])
 
-  function setDaily(id: string) {
-    setDrafts((d) => {
-      const next: Record<string, Draft> = {}
-      for (const c of items) {
-        next[c.id] = { ...(d[c.id] ?? { name: c.name, icon: c.icon, percent: '', daily: false }), daily: c.id === id }
-      }
-      return next
+  /*
+   * A toggle, not a choice between items. This used to clear `daily` from
+   * every other item, so marking one unmarked the last -- but several items
+   * can reasonably be paced per day, and each gets its own figure on the
+   * budget page.
+   */
+  function toggleDaily(c: Category) {
+    setDrafts((all) => {
+      const d = all[c.id] ?? { name: c.name, icon: c.icon, percent: '', daily: false }
+      return { ...all, [c.id]: { ...d, daily: !d.daily } }
     })
   }
 
@@ -106,7 +109,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
         name: n.name.trim(),
         icon: n.icon.trim() || '•',
         shareBp: n.percent.trim() === '' ? 0 : (parsePercent(n.percent) ?? 0),
-        daily: false,
+        daily: n.daily,
         sortOrder: maxOrder + 1 + i,
       }))
 
@@ -128,8 +131,14 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
       </div>
       <p className="text-xs text-fg-subtle">
         Each item takes its share of what is earmarked for the month. Rename an item here and past spending follows
-        it. Mark one as daily to see its balance per day.
+        it. Mark any of them daily to see what each leaves per day.
       </p>
+
+      {items.length === 0 && added.length === 0 && (
+        <p className="rounded-md border border-dashed border-edge px-3 py-4 text-center text-sm text-fg-subtle">
+          No items yet. Add the things this month&rsquo;s money is for, and give each a share.
+        </p>
+      )}
 
       <ul className="divide-y divide-edge">
         {items.map((c) => {
@@ -164,7 +173,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
                 </span>
               </label>
               <label className="flex items-center gap-1 text-xs text-fg-muted" title="Show this item's balance per day">
-                <input type="radio" name="daily" checked={d.daily} onChange={() => setDaily(c.id)} />
+                <input type="checkbox" checked={d.daily} onChange={() => toggleDaily(c)} />
                 daily
               </label>
               <button
@@ -216,7 +225,19 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
               />
               <span className="text-xs text-fg-subtle">%</span>
             </span>
-            <span aria-hidden className="w-10" />
+            {/* A plan now starts empty, so every item begins life here --
+                without this, daily could not be set until the plan was saved
+                and the editor reopened. */}
+            <label className="flex items-center gap-1 text-xs text-fg-muted" title="Show this item's balance per day">
+              <input
+                type="checkbox"
+                checked={n.daily}
+                onChange={() =>
+                  setAdded((all) => all.map((x) => (x.key === n.key ? { ...x, daily: !x.daily } : x)))
+                }
+              />
+              daily
+            </label>
             <button
               type="button"
               onClick={() => setAdded((all) => all.filter((x) => x.key !== n.key))}
@@ -231,7 +252,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
 
       <button
         type="button"
-        onClick={() => setAdded((all) => [...all, { key: nextKey++, name: '', icon: '', percent: '' }])}
+        onClick={() => setAdded((all) => [...all, { key: nextKey++, name: '', icon: '', percent: '', daily: false }])}
         className="text-sm font-semibold text-accent-text hover:underline"
       >
         + Add an item

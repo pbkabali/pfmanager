@@ -38,7 +38,8 @@ export function BudgetPage() {
         : [],
     [status, byId],
   )
-  const daily = items.find((i) => byId.get(i.categoryId)?.daily)
+  // Several items can be paced per day, each with its own figure.
+  const dailyItems = items.filter((i) => byId.get(i.categoryId)?.daily)
   const remaining = daysRemaining(month)
   const isCurrent = offset === 0
   const nextMonth = shiftMonth(monthKey(), 1)
@@ -135,37 +136,44 @@ export function BudgetPage() {
             </Tile>
           </section>
 
-          {daily && (
-            <section className="rounded-lg border border-accent/40 bg-accent/5 p-4" aria-label="Daily expenses">
-              <p className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
-                {byId.get(daily.categoryId)?.icon} {byId.get(daily.categoryId)?.name ?? 'Daily expenses'}
-              </p>
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs text-fg-subtle">Still available</p>
-                  <Money
-                    amountMinor={daily.availableMinor}
-                    currency={budget.currency}
-                    className={`text-2xl font-bold ${daily.availableMinor < 0 ? 'text-negative-text' : 'text-fg'}`}
-                  />
-                </div>
-                <div>
-                  <p className="text-xs text-fg-subtle">
-                    {remaining > 0 ? `Per day for the next ${remaining} day${remaining === 1 ? '' : 's'}` : 'Per day'}
-                  </p>
-                  {remaining > 0 ? (
+          {dailyItems.map((daily) => {
+            const name = byId.get(daily.categoryId)?.name ?? 'Daily expenses'
+            return (
+              <section
+                key={daily.categoryId}
+                className="rounded-lg border border-accent/40 bg-accent/5 p-4"
+                aria-label={name}
+              >
+                <p className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                  {byId.get(daily.categoryId)?.icon} {name}
+                </p>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs text-fg-subtle">Still available</p>
                     <Money
-                      amountMinor={Math.floor(Math.max(daily.availableMinor, 0) / remaining)}
+                      amountMinor={daily.availableMinor}
                       currency={budget.currency}
-                      className="text-2xl font-bold text-fg"
+                      className={`text-2xl font-bold ${daily.availableMinor < 0 ? 'text-negative-text' : 'text-fg'}`}
                     />
-                  ) : (
-                    <p className="text-sm text-fg-subtle">The month is over.</p>
-                  )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-fg-subtle">
+                      {remaining > 0 ? `Per day for the next ${remaining} day${remaining === 1 ? '' : 's'}` : 'Per day'}
+                    </p>
+                    {remaining > 0 ? (
+                      <Money
+                        amountMinor={Math.floor(Math.max(daily.availableMinor, 0) / remaining)}
+                        currency={budget.currency}
+                        className="text-2xl font-bold text-fg"
+                      />
+                    ) : (
+                      <p className="text-sm text-fg-subtle">The month is over.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            )
+          })}
 
           <section>
             <h2 className="mb-2 text-sm font-semibold tracking-wide text-fg-muted uppercase">Items</h2>

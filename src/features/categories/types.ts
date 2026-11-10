@@ -17,8 +17,10 @@ export type Category = {
    */
   shareBp?: number
   /**
-   * The one item whose remaining balance is also shown per day for the rest
-   * of the month. At most one category carries this.
+   * Show this item's remaining balance per day for the rest of the month, as
+   * well as in total. Any number of items may carry it: a plan can have
+   * several things paced daily -- food and transport, say -- and each wants
+   * its own per-day figure.
    */
   daily?: boolean
 }
