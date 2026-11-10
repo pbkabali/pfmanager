@@ -5,7 +5,9 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
 import { Brand } from '../../components/Brand'
 import { Loading } from '../../components/Loading'
-import { resetPassword, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../../lib/firebase/auth'
+import { auth, resetPassword, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../../lib/firebase/auth'
+import { forget, rememberedAccounts, switchTo, type RememberedAccount } from '../../lib/firebase/sessions'
+import { Avatar } from './Avatar'
 
 type Mode = 'signin' | 'signup'
 
@@ -21,13 +23,32 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [accounts, setAccounts] = useState<RememberedAccount[]>(() => rememberedAccounts())
+
+  /*
+   * Whose session was live when the account menu sent us here to add another.
+   * Null on an ordinary visit.
+   *
+   * Adding an account deliberately leaves the current one signed in -- it is
+   * only parked, not dropped -- so that abandoning this form costs nothing.
+   * That means the "already signed in, go away" check below has to let THIS
+   * uid through, or the form would never get a chance to render.
+   */
+  const [addingFrom] = useState<string | null>(() =>
+    (location.state as { add?: boolean } | null)?.add === true ? (auth.currentUser?.uid ?? null) : null,
+  )
 
   const from = (location.state as { from?: string } | null)?.from ?? '/'
 
+  // The account we are adding from is already signed in -- offering to
+  // "continue as" them would just bounce back to where they came from.
+  const switchable = accounts.filter((a) => a.uid !== addingFrom)
+
   if (loading) return <Loading label="Checking sign-in" />
-  // Already signed in: skip the form. Navigation happens here rather than in
-  // the submit handler so the Google popup path gets it for free too.
-  if (user) return <Navigate to={from} replace />
+  // Already signed in as someone other than the account we are adding from:
+  // skip the form. Navigation happens here rather than in the submit handler
+  // so the Google popup and the one-tap switches get it for free too.
+  if (user && user.uid !== addingFrom) return <Navigate to={from} replace />
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true)
@@ -63,8 +84,54 @@ export function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <Brand size="lg" />
-          <p className="mt-2 text-sm text-fg-subtle">Your money, on any device, even offline.</p>
+          <p className="mt-2 text-sm text-fg-subtle">
+            {addingFrom ? 'Sign in to the account you want to add.' : 'Your money, on any device, even offline.'}
+          </p>
         </div>
+
+        {/*
+          Accounts still signed in on this device. Tapping one needs no
+          password: its session was parked, not discarded. See sessions.ts.
+        */}
+        {switchable.length > 0 && (
+          <div className="overflow-hidden rounded-lg border border-edge bg-surface">
+            <p className="border-b border-edge px-3 py-2 text-xs font-semibold tracking-wide text-fg-muted uppercase">
+              Continue as
+            </p>
+            {switchable.map((account) => (
+              <div key={account.uid} className="flex items-center border-b border-edge last:border-b-0">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => switchTo(account.uid))}
+                  className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left hover:bg-surface-raised disabled:opacity-60"
+                >
+                  <Avatar account={account} />
+                  <span className="min-w-0 flex-1">
+                    {account.displayName && (
+                      <span className="block truncate text-sm font-semibold text-fg">{account.displayName}</span>
+                    )}
+                    <span className="block truncate text-xs text-fg-muted">{account.email}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      await forget(account.uid)
+                      setAccounts(rememberedAccounts())
+                    })
+                  }
+                  className="px-3 py-2.5 text-xs text-fg-subtle hover:text-danger-text disabled:opacity-60"
+                >
+                  <span aria-hidden>✕</span>
+                  <span className="sr-only">Forget {account.email ?? 'this account'}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <button
           type="button"
@@ -178,5 +245,8 @@ function describeAuthError(cause: unknown): string {
         return cause.message
     }
   }
+  // Switching raises plain Errors carrying a message already written for a
+  // person ("that sign-in has expired"); do not bury it under a generic one.
+  if (cause instanceof Error && cause.message) return cause.message
   return 'Something went wrong. Try again.'
 }
