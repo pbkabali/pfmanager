@@ -128,6 +128,12 @@ currency, sharing a `groupId`. Balances, filters and per-currency totals then
 need no special case, and the batch write means a person never sees half a
 salary.
 
+The cost is that such an entry cannot be corrected one row at a time: changing
+an income from 1,200,000 to 1,000,000 while its 120,000 set-aside transfer
+stayed put would leave the ledger stating something that never happened. Rows
+carrying a `groupId` or a `setAsideId` therefore refuse to be edited and say
+so, rather than offering an edit that is half right.
+
 **The monthly envelope.** The workflow the app is built around: income
 lands in accounts in whatever currency it arrives in; on the last day of the
 month a lumpsum is earmarked for the next month from the accounts in the
@@ -237,7 +243,9 @@ in production.
   dashboard already computes the by-category data; choose a charting approach
   before adding a dependency.
 - Recurring transactions (needs Cloud Functions, therefore Blaze).
-- Edit a transaction in place; today it is delete and re-add.
+- Edit a whole entry, not just one row of it. A split income or an income
+  with a set-aside wrote several transactions in one batch, and those are
+  still delete-and-re-add; everything else is editable in place.
 - Receipt photos (needs Storage, therefore Blaze).
 - Exchange rates and a reporting currency, if a single "net worth" figure is
   ever wanted. Today totals are per currency on purpose.

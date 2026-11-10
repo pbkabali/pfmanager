@@ -6,7 +6,14 @@ import { AppShell } from '../components/layout/AppShell'
 import { Loading } from '../components/Loading'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { TransactionsPage } from '../features/transactions/TransactionsPage'
-import { AccountPage, AccountsPage, BudgetPage, LoginPage, SettingsPage } from './lazyPages'
+import {
+  AccountPage,
+  AccountsPage,
+  BudgetPage,
+  LoginPage,
+  SettingsPage,
+  TransactionDetailPage,
+} from './lazyPages'
 import { ProtectedRoute } from './ProtectedRoute'
 
 const lazy = (element: React.ReactNode) => (
@@ -34,6 +41,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <DashboardPage /> },
               { path: 'transactions', element: <TransactionsPage /> },
+              { path: 'transactions/:transactionId', element: lazy(<TransactionDetailPage />) },
               { path: 'budget', element: lazy(<BudgetPage />) },
               { path: 'accounts', element: lazy(<AccountsPage />) },
               { path: 'accounts/:accountId', element: lazy(<AccountPage />) },

@@ -42,11 +42,16 @@ export async function seedProfile(user: User): Promise<void> {
 }
 
 /**
- * Bring an older profile up to the current schema. Today that means adding
- * default categories introduced since it was seeded ("Daily expenses", "Out of
- * budget") without touching anything the person already has. Reads go to the
- * server on purpose: an empty offline cache must not be mistaken for a missing
- * document, so with no connection this simply waits for a later visit.
+ * Bring an older profile up to the current schema: add any seeded category
+ * missing from it, without touching anything the person already has.
+ *
+ * Only ever ADDS. Expense categories were dropped from the seed (see
+ * defaults.ts) and this must not take them away from a profile that has been
+ * using them for months -- their past spending is labelled with them.
+ *
+ * Reads go to the server on purpose: an empty offline cache must not be
+ * mistaken for a missing document, so with no connection this simply waits
+ * for a later visit.
  */
 export async function upgradeProfile(uid: string, fromVersion: number): Promise<void> {
   if (fromVersion >= PROFILE_SCHEMA_VERSION) return

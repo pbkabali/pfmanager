@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
-import { cancelButton } from '../../components/buttonStyles'
+import { dangerButton } from '../../components/buttonStyles'
 import { Money } from '../../components/Money'
 import { formatMoney, parseAmount } from '../../lib/money'
 import { computeBalances } from '../accounts/balances'
@@ -276,7 +276,7 @@ export function FundBudgetForm({
         >
           Fund {monthLabelFor(month)}
         </button>
-        <button type="button" onClick={onCancel} className={cancelButton}>
+        <button type="button" onClick={onCancel} className={dangerButton}>
           Cancel
         </button>
       </div>

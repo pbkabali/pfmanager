@@ -2,7 +2,9 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
+  getDocs,
   limit,
   onSnapshot,
   orderBy,
@@ -94,6 +96,93 @@ export function useTransactions(filter: TransactionsFilter = {}): TransactionsSt
   return state
 }
 
+export type TransactionState = {
+  transaction: Transaction | null
+  loading: boolean
+  error: Error | null
+}
+
+/**
+ * One transaction, live. Its own listener rather than a search through the
+ * list, so opening a row straight from a link works without first loading
+ * every other row, and so an edit made on another device shows here.
+ *
+ * `transaction` stays null while loading AND when the document is missing;
+ * the caller tells the two apart with `loading`.
+ */
+export function useTransaction(id: string): TransactionState {
+  const user = useUser()
+  // The id the state describes is held with it, so a move to a different
+  // transaction needs no reset: the mismatch is read during render instead.
+  const [state, setState] = useState<TransactionState & { id: string }>({
+    id,
+    transaction: null,
+    loading: true,
+    error: null,
+  })
+
+  useEffect(() => {
+    return onSnapshot(
+      doc(db, userPath(user.uid, userCollections.transactions), id),
+      (snap) => {
+        setState({
+          id,
+          transaction: snap.exists() ? { ...(snap.data() as Omit<Transaction, 'id'>), id: snap.id } : null,
+          loading: false,
+          error: null,
+        })
+      },
+      (error) => setState({ id, transaction: null, loading: false, error }),
+    )
+  }, [user.uid, id])
+
+  // Still carrying the previous transaction while the new listener attaches:
+  // loading is the truth, and beats showing the wrong row for a frame.
+  if (state.id !== id) return { transaction: null, loading: true, error: null }
+  return state
+}
+
+/**
+ * The other parts of a split: one income that landed in several accounts, plus
+ * any set-aside transfers written with it. Read once rather than watched --
+ * the siblings of a saved transaction do not change while it is on screen.
+ *
+ * A `where` on groupId alone needs no composite index; ordering is done here.
+ */
+export function useTransactionGroup(groupId: string | undefined): Transaction[] {
+  const user = useUser()
+  // Keyed by the group it belongs to, so results from the group just left
+  // never show under the next one.
+  const [found, setFound] = useState<{ groupId: string; rows: Transaction[] } | null>(null)
+
+  useEffect(() => {
+    if (!groupId) return
+    let live = true
+    const q = query(
+      collection(db, userPath(user.uid, userCollections.transactions)),
+      where('groupId', '==', groupId),
+    )
+    void getDocs(q)
+      .then((snap) => {
+        if (!live) return
+        const rows = snap.docs.map((d) => ({ ...(d.data() as Omit<Transaction, 'id'>), id: d.id }))
+        // Income parts first, then what was set aside from them.
+        rows.sort((a, b) => Number(a.type === 'transfer') - Number(b.type === 'transfer'))
+        setFound({ groupId, rows })
+      })
+      .catch(() => {
+        // A group that will not load is not worth an error screen: the
+        // transaction itself still renders in full, just without its
+        // siblings listed beneath it.
+      })
+    return () => {
+      live = false
+    }
+  }, [user.uid, groupId])
+
+  return found && found.groupId === groupId ? found.rows : []
+}
+
 /*
  * Mutations. Not awaited by the UI when offline -- see useAccounts.ts.
  * `undefined` fields are stripped: Firestore rejects them, and a transfer has
@@ -153,11 +242,38 @@ export function createIncome(
   return batch.commit()
 }
 
-export function updateTransaction(uid: string, id: string, input: Partial<TransactionInput>) {
-  return updateDoc(doc(db, userPath(uid, userCollections.transactions), id), {
-    ...clean(input),
-    updatedAt: serverTimestamp(),
-  })
+/**
+ * An edit. A field given as `null` is REMOVED from the document rather than
+ * left alone.
+ *
+ * This is the whole reason `clean()` is not used here. An expense that no
+ * longer crosses currencies must lose `accountAmountMinor` altogether, and a
+ * transfer that no longer does must lose `toAmountMinor`. Stripping undefined
+ * the way a create does would leave the stale figure sitting in the document,
+ * where the budget and the account ledger would go on believing it.
+ */
+export type TransactionEdit = { [K in keyof TransactionInput]?: TransactionInput[K] | null }
+
+export function editTransaction(uid: string, id: string, changes: TransactionEdit) {
+  const patch: Record<string, unknown> = { updatedAt: serverTimestamp() }
+  for (const [key, value] of Object.entries(changes)) {
+    patch[key] = value === null ? deleteField() : value
+  }
+  return updateDoc(doc(db, userPath(uid, userCollections.transactions), id), patch)
+}
+
+/**
+ * Whether this row can be edited on its own.
+ *
+ * A split income is several documents sharing a groupId, and an income with
+ * a set-aside wrote the transfer in the same batch. Changing one of those in
+ * isolation leaves the others stating amounts that no longer add up -- an
+ * income of 1,200,000 with its 120,000 tithe still beside it after the income
+ * was corrected to 1,000,000. Those are delete-and-re-add until editing a
+ * whole entry exists.
+ */
+export function isEditable(t: Transaction): boolean {
+  return !t.groupId && !t.setAsideId
 }
 
 export function deleteTransaction(uid: string, id: string) {

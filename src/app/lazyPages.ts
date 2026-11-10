@@ -24,3 +24,9 @@ export const BudgetPage = lazy(() =>
 export const AccountPage = lazy(() =>
   import('../features/accounts/AccountPage').then((m) => ({ default: m.AccountPage })),
 )
+
+export const TransactionDetailPage = lazy(() =>
+  import('../features/transactions/TransactionDetailPage').then((m) => ({
+    default: m.TransactionDetailPage,
+  })),
+)

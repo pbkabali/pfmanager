@@ -2,9 +2,9 @@ import { Timestamp } from 'firebase/firestore'
 import { useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
-import { cancelButton } from '../../components/buttonStyles'
+import { dangerButton } from '../../components/buttonStyles'
 import { Money } from '../../components/Money'
-import { formatMoney, parseAmount } from '../../lib/money'
+import { parseAmount } from '../../lib/money'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
 import { accountCurrency, type Account } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
@@ -14,6 +14,8 @@ import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
 import { CURRENCIES } from '../profile/types'
 import { isActionable, setAsideLines, type SetAsideLine } from '../setAsides/rules'
+import { overspendMessage } from './budgetCheck'
+import { field, label } from './formStyles'
 import { fromDateInputValue, toDateInputValue } from './periods'
 import type { TransactionType } from './types'
 import { createIncome, createTransaction, type SetAsideTransfer } from './useTransactions'
@@ -23,9 +25,6 @@ const TYPES: { value: TransactionType; label: string }[] = [
   { value: 'income', label: 'Received' },
   { value: 'transfer', label: 'Moved' },
 ]
-
-const field = 'mt-1 w-full rounded-md border border-edge bg-bg px-3 py-2 text-fg'
-const label = 'text-xs font-semibold tracking-wide text-fg-muted uppercase'
 
 /** One destination of an income: which account, and how much landed there. */
 type Part = { key: number; accountId: string; amount: string }
@@ -253,24 +252,15 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
         }
         accountAmountMinor = charged
       }
-      // A plan item cannot be spent past what it still has. Checked in the
-      // budget's currency: the price when priced in it, else what the account
-      // was charged when the account is in it. Otherwise there is no rate to
-      // compare with and the entry is allowed through.
-      if (item) {
-        const inBudget =
-          currency === itemCurrency
-            ? amountMinor
-            : accountAmountMinor !== undefined && currencyOf(account) === itemCurrency
-              ? accountAmountMinor
-              : null
-        if (inBudget !== null && inBudget > item.availableMinor) {
-          const name = categories.find((c) => c.id === item.categoryId)?.name ?? 'this item'
-          return fail(
-            `Only ${formatMoney(Math.max(item.availableMinor, 0), itemCurrency)} is still available for ${name} this month.`,
-          )
-        }
-      }
+      // A plan item cannot be spent past what it still has. Nothing is
+      // already counted towards it: this entry does not exist yet.
+      const overspend = overspendMessage(
+        { amountMinor, currency, accountAmountMinor, accountCurrency: currencyOf(account) },
+        item,
+        itemCurrency,
+        categories.find((c) => c.id === item?.categoryId)?.name ?? 'this item',
+      )
+      if (overspend) return fail(overspend)
       createTransaction(user.uid, {
         type,
         amountMinor,
@@ -287,8 +277,13 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
     onSaved?.()
   }
 
-  // Paid-from picker, placed after the category for expenses (the category
-  // decides which accounts are offered) and first for transfers.
+  // Which account the money leaves. Placed after the category for expenses
+  // (the category decides which accounts are offered) and first for transfers.
+  //
+  // Income has no such field: money arriving from outside has no account of
+  // ours to leave, and where it LANDS is already chosen per part in
+  // IncomeParts ("Into"). Moving money between two of your own accounts is
+  // what Moved is for.
   const fromField = (
     <label className="block">
       <span className={label}>{type === 'expense' ? 'Paid from' : 'From'}</span>
@@ -386,7 +381,14 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
         </label>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/*
+        [&>*]:min-w-0 is load-bearing. A grid item defaults to min-width:auto,
+        so it cannot shrink below its content -- and iOS reports a wide
+        min-content size for a native date control. The Date field grew past
+        its column and out through the right edge of the card; every other
+        field happened to be narrow enough to hide the problem.
+      */}
+      <div className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
         {type === 'transfer' && fromField}
 
         {type === 'transfer' ? (
@@ -451,7 +453,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
                 <span className="mt-1 block text-xs text-fg-subtle">No budget set for this month.</span>
               )}
             </label>
-            {fromField}
+            {type === 'expense' && fromField}
             {chargedInOtherCurrency && (
               <label className="block sm:col-span-2">
                 <span className={label}>Charged to account as ({currencyOf(account)})</span>
@@ -474,7 +476,15 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
 
         <label className="block">
           <span className={label}>Date</span>
-          <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+          {/* min-w-0 again on the control itself: the date input carries its
+              own intrinsic minimum, which w-full alone does not override. */}
+          <input
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={`${field} min-w-0`}
+          />
         </label>
 
         <label className="block">
@@ -500,7 +510,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
           Save
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className={cancelButton}>
+          <button type="button" onClick={onCancel} className={dangerButton}>
             Cancel
           </button>
         )}

@@ -115,6 +115,7 @@ export function AccountPage() {
               account={byId.get(t.accountId)}
               toAccount={t.toAccountId ? byId.get(t.toAccountId) : undefined}
               perspectiveAccountId={accountId}
+              to={`/transactions/${t.id}`}
               onDelete={() => {
                 if (confirm('Delete this transaction?')) void deleteTransaction(user.uid, t.id)
               }}

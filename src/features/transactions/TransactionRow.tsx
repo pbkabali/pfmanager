@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { Money } from '../../components/Money'
 import type { Account } from '../accounts/types'
 import { accountCurrency } from '../accounts/types'
@@ -12,6 +14,7 @@ export function TransactionRow({
   account,
   toAccount,
   perspectiveAccountId,
+  to,
   onDelete,
 }: {
   transaction: Transaction
@@ -22,6 +25,8 @@ export function TransactionRow({
   toAccount?: Account
   /** When listing one account's ledger: colour transfers as in or out of it. */
   perspectiveAccountId?: string
+  /** Where tapping the row goes. Omit to leave the row inert. */
+  to?: string
   onDelete?: () => void
 }) {
   const t = transaction
@@ -63,8 +68,8 @@ export function TransactionRow({
       </>
     ) : null
 
-  return (
-    <li className="flex items-center gap-3 py-3">
+  const body = (
+    <>
       <span aria-hidden className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-surface-raised text-lg">
         {icon}
       </span>
@@ -89,6 +94,20 @@ export function TransactionRow({
         <Money amountMinor={shownAmount} currency={shownCurrency} direction={direction} />
         {landed}
       </span>
+    </>
+  )
+
+  // The delete button sits OUTSIDE the link: nesting it would make a tap on
+  // the ✕ ambiguous, and on a phone the two targets are millimetres apart.
+  return (
+    <li className="flex items-center gap-3 py-3">
+      {to ? (
+        <Link to={to} className="flex min-w-0 flex-1 items-center gap-3">
+          {body}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">{body}</div>
+      )}
       {onDelete && (
         <button
           type="button"

@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
-import { cancelButton } from '../../components/buttonStyles'
+import { dangerButton } from '../../components/buttonStyles'
 import { sortCurrencies } from '../accounts/balances'
 import { accountCurrency } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
@@ -215,7 +215,7 @@ function RuleForm({ rule, existing, onClose }: { rule: SetAside | null; existing
         <button type="submit" className="flex-1 rounded-md bg-accent py-2.5 font-bold text-accent-fg">
           {rule ? 'Save rule' : 'Add rule'}
         </button>
-        <button type="button" onClick={onClose} className={cancelButton}>
+        <button type="button" onClick={onClose} className={dangerButton}>
           Cancel
         </button>
       </div>
