@@ -2,13 +2,24 @@ import { useMemo, useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
 import { cancelButton } from '../../components/buttonStyles'
+import { IconPicker } from '../categories/IconPicker'
+import { suggestIcon } from '../categories/icons'
 import { OUT_OF_BUDGET_CATEGORY_ID, type Category } from '../categories/types'
 import { savePlan, setCategoryArchived, type PlanEntry } from '../categories/useCategories'
 import { BP_TOTAL, formatPercent, parsePercent } from './allocate'
 
 
 type Draft = { name: string; icon: string; percent: string; daily: boolean }
-type NewItem = { key: number; name: string; icon: string; percent: string; daily: boolean }
+type NewItem = {
+  key: number
+  name: string
+  icon: string
+  percent: string
+  daily: boolean
+  /** The icon came from suggestIcon, so renaming may replace it. Cleared the
+   *  moment somebody picks one themselves. */
+  guessed: boolean
+}
 
 let nextKey = 1
 
@@ -145,9 +156,11 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
           const d = draftFor(c)
           return (
             <li key={c.id} className="grid grid-cols-[2.5rem_1fr_5.5rem_auto_auto] items-center gap-2 py-2">
-              <span aria-hidden className="text-center text-lg">
-                {c.icon}
-              </span>
+              <IconPicker
+                value={d.icon}
+                onChange={(icon) => setDrafts((all) => ({ ...all, [c.id]: { ...d, icon } }))}
+                label={`Icon for ${d.name || c.name}`}
+              />
               <input
                 type="text"
                 required
@@ -193,13 +206,12 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
         })}
         {added.map((n) => (
           <li key={n.key} className="grid grid-cols-[2.5rem_1fr_5.5rem_auto_auto] items-center gap-2 py-2">
-            <input
-              type="text"
-              aria-label="Icon"
-              placeholder="•"
+            <IconPicker
               value={n.icon}
-              onChange={(e) => setAdded((all) => all.map((x) => (x.key === n.key ? { ...x, icon: e.target.value } : x)))}
-              className="w-full rounded-md border border-edge bg-bg px-2 py-1.5 text-center text-sm text-fg"
+              onChange={(icon) =>
+                setAdded((all) => all.map((x) => (x.key === n.key ? { ...x, icon, guessed: false } : x)))
+              }
+              label={`Icon for ${n.name || 'new item'}`}
             />
             <input
               type="text"
@@ -207,7 +219,18 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
               placeholder="New item"
               autoFocus
               value={n.name}
-              onChange={(e) => setAdded((all) => all.map((x) => (x.key === n.key ? { ...x, name: e.target.value } : x)))}
+              onChange={(e) =>
+                setAdded((all) =>
+                  all.map((x) => {
+                    if (x.key !== n.key) return x
+                    const name = e.target.value
+                    // Only ever replaces a guess, never a chosen icon.
+                    if (!x.guessed && x.icon) return { ...x, name }
+                    const guess = suggestIcon(name)
+                    return guess ? { ...x, name, icon: guess, guessed: true } : { ...x, name }
+                  }),
+                )
+              }
               className="w-full rounded-md border border-edge bg-bg px-2 py-1.5 text-sm text-fg"
             />
             <span className="flex items-center gap-1">
@@ -252,7 +275,12 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
 
       <button
         type="button"
-        onClick={() => setAdded((all) => [...all, { key: nextKey++, name: '', icon: '', percent: '', daily: false }])}
+        onClick={() =>
+          setAdded((all) => [
+            ...all,
+            { key: nextKey++, name: '', icon: '', percent: '', daily: false, guessed: false },
+          ])
+        }
         className="text-sm font-semibold text-accent-text hover:underline"
       >
         + Add an item
