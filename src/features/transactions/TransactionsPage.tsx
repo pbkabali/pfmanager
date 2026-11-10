@@ -73,6 +73,7 @@ export function TransactionsPage() {
               category={t.categoryId ? categories.get(t.categoryId) : undefined}
               account={accounts.get(t.accountId)}
               toAccount={t.toAccountId ? accounts.get(t.toAccountId) : undefined}
+              to={`/transactions/${t.id}`}
               onDelete={() => {
                 if (confirm('Delete this transaction?')) void deleteTransaction(user.uid, t.id)
               }}

@@ -2,7 +2,7 @@ import { Timestamp } from 'firebase/firestore'
 import { useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
-import { cancelButton } from '../../components/buttonStyles'
+import { dangerButton } from '../../components/buttonStyles'
 import { Money } from '../../components/Money'
 import { formatMoney, parseAmount } from '../../lib/money'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
@@ -520,7 +520,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
           Save
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className={cancelButton}>
+          <button type="button" onClick={onCancel} className={dangerButton}>
             Cancel
           </button>
         )}

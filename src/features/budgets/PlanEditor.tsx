@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
-import { cancelButton } from '../../components/buttonStyles'
+import { dangerButton } from '../../components/buttonStyles'
 import { IconPicker } from '../categories/IconPicker'
 import { suggestIcon } from '../categories/icons'
 import { OUT_OF_BUDGET_CATEGORY_ID, type Category } from '../categories/types'
@@ -302,7 +302,7 @@ export function PlanEditor({ categories, onClose }: { categories: Category[]; on
         <button type="submit" className="flex-1 rounded-md bg-accent py-2.5 font-bold text-accent-fg">
           Save plan
         </button>
-        <button type="button" onClick={onClose} className={cancelButton}>
+        <button type="button" onClick={onClose} className={dangerButton}>
           Cancel
         </button>
       </div>
