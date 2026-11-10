@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { useUser } from '../../app/providers/useAuth'
@@ -9,7 +9,8 @@ import { accountCurrency } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
 import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
-import { deleteTransaction, useTransaction, useTransactionGroup } from './useTransactions'
+import { EditTransactionForm } from './EditTransactionForm'
+import { deleteTransaction, isEditable, useTransaction, useTransactionGroup } from './useTransactions'
 
 /** One label-and-value line. Values that are absent drop the whole line. */
 function Detail({ label, children }: { label: string; children: ReactNode }) {
@@ -40,6 +41,7 @@ export function TransactionDetailPage() {
   const { byId: categories } = useCategories()
   const { byId: accounts } = useAccounts()
   const siblings = useTransactionGroup(transaction?.groupId)
+  const [editing, setEditing] = useState(false)
 
   // `key` is react-router's marker for the entry the app opened on: going
   // back from there would leave the app, so a deep link falls back to the list.
@@ -94,6 +96,23 @@ export function TransactionDetailPage() {
   })
   const stamp = (value: typeof t.createdAt) =>
     value ? value.toDate().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : null
+
+  if (editing) {
+    return (
+      <>
+        <PageHeader
+          title={`Edit ${TYPE_LABEL[t.type].toLowerCase()}`}
+          subtitle={title}
+          action={back}
+        />
+        <EditTransactionForm
+          transaction={t}
+          onSaved={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
+        />
+      </>
+    )
+  }
 
   return (
     <>
@@ -214,18 +233,42 @@ export function TransactionDetailPage() {
         </section>
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          if (!confirm('Delete this transaction?')) return
-          void deleteTransaction(user.uid, t.id)
-          // Straight back to the list: this row is about to vanish from under us.
-          navigate('/transactions', { replace: true })
-        }}
-        className={`mt-6 ${dangerButton}`}
-      >
-        Delete this transaction
-      </button>
+      <div className="mt-6 flex flex-wrap gap-2">
+        {isEditable(t) ? (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="rounded-md bg-accent px-4 py-2.5 text-sm font-bold text-accent-fg"
+          >
+            Edit
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            if (!confirm('Delete this transaction?')) return
+            void deleteTransaction(user.uid, t.id)
+            // Straight back to the list: this row is about to vanish from under us.
+            navigate('/transactions', { replace: true })
+          }}
+          className={dangerButton}
+        >
+          Delete this transaction
+        </button>
+      </div>
+
+      {/*
+        Said plainly rather than by a greyed-out button. An entry that wrote
+        several rows at once cannot be corrected one row at a time without
+        leaving the others stating amounts that no longer add up.
+      */}
+      {!isEditable(t) && (
+        <p className="mt-2 text-xs text-fg-subtle">
+          {t.setAsideId
+            ? 'This was set aside automatically from an income, so it cannot be edited on its own. Delete it and record it again, or correct the income it came from.'
+            : 'This was one part of a larger entry, so it cannot be edited on its own. Delete its parts and record the entry again.'}
+        </p>
+      )}
     </>
   )
 }

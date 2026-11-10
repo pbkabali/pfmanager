@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   limit,
@@ -241,11 +242,38 @@ export function createIncome(
   return batch.commit()
 }
 
-export function updateTransaction(uid: string, id: string, input: Partial<TransactionInput>) {
-  return updateDoc(doc(db, userPath(uid, userCollections.transactions), id), {
-    ...clean(input),
-    updatedAt: serverTimestamp(),
-  })
+/**
+ * An edit. A field given as `null` is REMOVED from the document rather than
+ * left alone.
+ *
+ * This is the whole reason `clean()` is not used here. An expense that no
+ * longer crosses currencies must lose `accountAmountMinor` altogether, and a
+ * transfer that no longer does must lose `toAmountMinor`. Stripping undefined
+ * the way a create does would leave the stale figure sitting in the document,
+ * where the budget and the account ledger would go on believing it.
+ */
+export type TransactionEdit = { [K in keyof TransactionInput]?: TransactionInput[K] | null }
+
+export function editTransaction(uid: string, id: string, changes: TransactionEdit) {
+  const patch: Record<string, unknown> = { updatedAt: serverTimestamp() }
+  for (const [key, value] of Object.entries(changes)) {
+    patch[key] = value === null ? deleteField() : value
+  }
+  return updateDoc(doc(db, userPath(uid, userCollections.transactions), id), patch)
+}
+
+/**
+ * Whether this row can be edited on its own.
+ *
+ * A split income is several documents sharing a groupId, and an income with
+ * a set-aside wrote the transfer in the same batch. Changing one of those in
+ * isolation leaves the others stating amounts that no longer add up -- an
+ * income of 1,200,000 with its 120,000 tithe still beside it after the income
+ * was corrected to 1,000,000. Those are delete-and-re-add until editing a
+ * whole entry exists.
+ */
+export function isEditable(t: Transaction): boolean {
+  return !t.groupId && !t.setAsideId
 }
 
 export function deleteTransaction(uid: string, id: string) {

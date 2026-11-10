@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { useUser } from '../../app/providers/useAuth'
 import { dangerButton } from '../../components/buttonStyles'
 import { Money } from '../../components/Money'
-import { formatMoney, parseAmount } from '../../lib/money'
+import { parseAmount } from '../../lib/money'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
 import { accountCurrency, type Account } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
@@ -14,6 +14,8 @@ import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
 import { CURRENCIES } from '../profile/types'
 import { isActionable, setAsideLines, type SetAsideLine } from '../setAsides/rules'
+import { overspendMessage } from './budgetCheck'
+import { field, label } from './formStyles'
 import { fromDateInputValue, toDateInputValue } from './periods'
 import type { TransactionType } from './types'
 import { createIncome, createTransaction, type SetAsideTransfer } from './useTransactions'
@@ -23,9 +25,6 @@ const TYPES: { value: TransactionType; label: string }[] = [
   { value: 'income', label: 'Received' },
   { value: 'transfer', label: 'Moved' },
 ]
-
-const field = 'mt-1 w-full rounded-md border border-edge bg-bg px-3 py-2 text-fg'
-const label = 'text-xs font-semibold tracking-wide text-fg-muted uppercase'
 
 /** One destination of an income: which account, and how much landed there. */
 type Part = { key: number; accountId: string; amount: string }
@@ -253,24 +252,15 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
         }
         accountAmountMinor = charged
       }
-      // A plan item cannot be spent past what it still has. Checked in the
-      // budget's currency: the price when priced in it, else what the account
-      // was charged when the account is in it. Otherwise there is no rate to
-      // compare with and the entry is allowed through.
-      if (item) {
-        const inBudget =
-          currency === itemCurrency
-            ? amountMinor
-            : accountAmountMinor !== undefined && currencyOf(account) === itemCurrency
-              ? accountAmountMinor
-              : null
-        if (inBudget !== null && inBudget > item.availableMinor) {
-          const name = categories.find((c) => c.id === item.categoryId)?.name ?? 'this item'
-          return fail(
-            `Only ${formatMoney(Math.max(item.availableMinor, 0), itemCurrency)} is still available for ${name} this month.`,
-          )
-        }
-      }
+      // A plan item cannot be spent past what it still has. Nothing is
+      // already counted towards it: this entry does not exist yet.
+      const overspend = overspendMessage(
+        { amountMinor, currency, accountAmountMinor, accountCurrency: currencyOf(account) },
+        item,
+        itemCurrency,
+        categories.find((c) => c.id === item?.categoryId)?.name ?? 'this item',
+      )
+      if (overspend) return fail(overspend)
       createTransaction(user.uid, {
         type,
         amountMinor,
