@@ -287,8 +287,13 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
     onSaved?.()
   }
 
-  // Paid-from picker, placed after the category for expenses (the category
-  // decides which accounts are offered) and first for transfers.
+  // Which account the money leaves. Placed after the category for expenses
+  // (the category decides which accounts are offered) and first for transfers.
+  //
+  // Income has no such field: money arriving from outside has no account of
+  // ours to leave, and where it LANDS is already chosen per part in
+  // IncomeParts ("Into"). Moving money between two of your own accounts is
+  // what Moved is for.
   const fromField = (
     <label className="block">
       <span className={label}>{type === 'expense' ? 'Paid from' : 'From'}</span>
@@ -451,7 +456,7 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
                 <span className="mt-1 block text-xs text-fg-subtle">No budget set for this month.</span>
               )}
             </label>
-            {fromField}
+            {type === 'expense' && fromField}
             {chargedInOtherCurrency && (
               <label className="block sm:col-span-2">
                 <span className={label}>Charged to account as ({currencyOf(account)})</span>
