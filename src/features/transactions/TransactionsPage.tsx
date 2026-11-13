@@ -5,6 +5,7 @@ import { useUser } from '../../app/providers/useAuth'
 import { Money } from '../../components/Money'
 import { PageHeader } from '../../components/PageHeader'
 import { useAccounts } from '../accounts/useAccounts'
+import { dateWithinMonth } from '../budgets/months'
 import { useCategories } from '../categories/useCategories'
 import { useProfile } from '../profile/profileContext'
 import { ActivityFilters } from './ActivityFilters'
@@ -36,6 +37,14 @@ export function TransactionsPage() {
    */
   const [params, setParams] = useSearchParams()
   const adding = params.has('add')
+  /*
+   * Started from a budget item: `for` is the item and `month` the budget
+   * being looked at. The date follows the month rather than today, so
+   * recording against October while browsing October does not file the
+   * spending under November.
+   */
+  const startCategoryId = params.get('for') ?? undefined
+  const startMonth = params.get('month')
   const typeParam = params.get('type')
   const text = params.get('q') ?? ''
   const categoryId = params.get('cat') ?? ''
@@ -55,8 +64,14 @@ export function TransactionsPage() {
 
   const setAdding = (open: boolean) => {
     const updated = new URLSearchParams(params)
-    if (open) updated.set('add', '')
-    else updated.delete('add')
+    if (open) {
+      updated.set('add', '')
+    } else {
+      // The starting point goes with the form it opened.
+      updated.delete('add')
+      updated.delete('for')
+      updated.delete('month')
+    }
     setParams(updated, { replace: true })
   }
 
@@ -95,6 +110,8 @@ export function TransactionsPage() {
       {adding && (
         <div className="mb-6">
           <TransactionForm
+            startCategoryId={startCategoryId}
+            startDate={startMonth ? dateWithinMonth(startMonth) : undefined}
             onSaved={() => {
               // Back to the list, with the new row in view at the top.
               setAdding(false)

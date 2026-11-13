@@ -47,7 +47,19 @@ function newPart(accountId = ''): Part {
  * transfer between accounts of different currencies asks for both sides.
  * No exchange rates: the numbers recorded are the numbers that happened.
  */
-export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; onCancel?: () => void }) {
+export function TransactionForm({
+  onSaved,
+  onCancel,
+  startCategoryId,
+  startDate,
+}: {
+  onSaved?: () => void
+  onCancel?: () => void
+  /** Opened from a budget item: that item, already chosen. */
+  startCategoryId?: string
+  /** Opened from a month's budget: a date inside that month. */
+  startDate?: Date
+}) {
   const user = useUser()
   const profile = useProfile()
   const { currency: profileCurrency } = profile
@@ -65,8 +77,8 @@ export function TransactionForm({ onSaved, onCancel }: { onSaved?: () => void; o
   const [parts, setParts] = useState<Part[]>(() => [newPart()])
   // Set-aside lines the person unticked for this entry, keyed `${part.key}:${rule.id}`.
   const [skipped, setSkipped] = useState<Set<string>>(() => new Set())
-  const [categoryId, setCategoryId] = useState('')
-  const [date, setDate] = useState(() => toDateInputValue(new Date()))
+  const [categoryId, setCategoryId] = useState(startCategoryId ?? '')
+  const [date, setDate] = useState(() => toDateInputValue(startDate ?? new Date()))
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
 
