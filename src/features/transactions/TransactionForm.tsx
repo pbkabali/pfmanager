@@ -6,6 +6,7 @@ import { dangerButton } from '../../components/buttonStyles'
 import { Money } from '../../components/Money'
 import { parseAmount } from '../../lib/money'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
+import { useUnsavedWork } from '../../lib/hooks/useUnsavedWork'
 import { accountCurrency, type Account } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
 import { daysRemaining, monthKey } from '../budgets/months'
@@ -61,6 +62,9 @@ export function TransactionForm({
   startDate?: Date
 }) {
   const user = useUser()
+  // Everything typed here is held in memory until Save, so nothing may
+  // navigate away on its own while this is open.
+  useUnsavedWork()
   const profile = useProfile()
   const { currency: profileCurrency } = profile
   const online = useOnlineStatus()

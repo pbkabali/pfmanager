@@ -6,6 +6,7 @@ import { dangerButton } from '../../components/buttonStyles'
 import { Money } from '../../components/Money'
 import { useOnlineStatus } from '../../lib/hooks/useOnlineStatus'
 import { formatMoney, parseAmount, toInputValue } from '../../lib/money'
+import { useUnsavedWork } from '../../lib/hooks/useUnsavedWork'
 import { accountCurrency } from '../accounts/types'
 import { useAccounts } from '../accounts/useAccounts'
 import { monthKey } from '../budgets/months'
@@ -44,6 +45,8 @@ export function EditTransactionForm({
 }) {
   const t = transaction
   const user = useUser()
+  // Unsaved input: nothing may navigate away from it on its own.
+  useUnsavedWork()
   const { currency: profileCurrency } = useProfile()
   const online = useOnlineStatus()
   const { active: activeAccounts, byId: allAccounts } = useAccounts()

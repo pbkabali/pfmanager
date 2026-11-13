@@ -6,6 +6,7 @@ import { InstallPrompt } from '../InstallPrompt'
 import { OfflineBanner } from '../OfflineBanner'
 import { ThemeToggle } from '../ThemeToggle'
 import { navItems } from './nav'
+import { OpenOnBudget } from './OpenOnBudget'
 import { SwipeNavigation } from './SwipeNavigation'
 
 /**
@@ -23,6 +24,7 @@ export function AppShell() {
   return (
     <div className="flex min-h-dvh flex-col overscroll-none-y md:flex-row">
       <SwipeNavigation />
+      <OpenOnBudget />
       {/* ---- Sidebar (desktop) ---- */}
       <aside className="hidden w-56 flex-none flex-col border-r border-edge bg-surface md:flex">
         <div className="px-5 py-5">
