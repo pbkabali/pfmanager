@@ -53,6 +53,18 @@ export function daysRemaining(key: string, today = new Date()): number {
   return Math.round((end.getTime() - day.getTime()) / 86_400_000)
 }
 
+/**
+ * A date that falls inside the month: today when it IS this month, otherwise
+ * its last day. Used when an entry is started from a month's budget, so
+ * recording against October while browsing it does not silently file the
+ * spending under today.
+ */
+export function dateWithinMonth(key: string, today = new Date()): Date {
+  if (monthKey(today) === key) return today
+  const { year, month } = parts(key)
+  return new Date(year, month + 1, 0)
+}
+
 /** True on the last day of the month, when next month is normally funded. */
 export function isLastDayOfMonth(today = new Date()): boolean {
   return daysRemaining(monthKey(today), today) === 1

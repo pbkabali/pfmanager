@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useUser } from '../../app/providers/useAuth'
 import { Money } from '../../components/Money'
@@ -144,9 +145,15 @@ export function BudgetPage() {
                 className="rounded-lg border border-accent/40 bg-accent/5 p-4"
                 aria-label={name}
               >
-                <p className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                {/* The daily card is the one most often acted on, so it is a
+                    way in too, not just a readout. */}
+                <Link
+                  to={`/transactions?add&for=${encodeURIComponent(daily.categoryId)}&month=${month}`}
+                  aria-label={`Record spending on ${name}`}
+                  className="text-xs font-semibold tracking-wide text-fg-muted uppercase"
+                >
                   {byId.get(daily.categoryId)?.icon} {name}
-                </p>
+                </Link>
                 <div className="mt-2 grid gap-3 sm:grid-cols-2">
                   <div>
                     <p className="text-xs text-fg-subtle">Still available</p>
@@ -176,17 +183,25 @@ export function BudgetPage() {
           })}
 
           <section>
-            <h2 className="mb-2 text-sm font-semibold tracking-wide text-fg-muted uppercase">Items</h2>
+            <h2 className="text-sm font-semibold tracking-wide text-fg-muted uppercase">Items</h2>
+            <p className="mb-2 text-xs text-fg-subtle">Tap an item to record spending against it.</p>
             <ul className="divide-y divide-edge rounded-lg border border-edge bg-surface px-4">
               {items.map((item) => {
                 const c = byId.get(item.categoryId)
                 const used = item.allocatedMinor > 0 ? Math.min(item.spentMinor / item.allocatedMinor, 1) : item.spentMinor > 0 ? 1 : 0
                 const over = item.availableMinor < 0
+                const name = c?.name ?? item.categoryId
                 return (
                   <li key={item.categoryId} className="py-3">
-                    <div className="flex items-center justify-between gap-3 text-sm">
+                    {/* Straight to a new expense with this item already chosen,
+                        dated inside the month being looked at. */}
+                    <Link
+                      to={`/transactions?add&for=${encodeURIComponent(item.categoryId)}&month=${month}`}
+                      aria-label={`Record spending on ${name}`}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
                       <span className="min-w-0 truncate font-semibold text-fg">
-                        {c?.icon ?? '•'} {c?.name ?? item.categoryId}
+                        {c?.icon ?? '•'} {name}
                         <span className="ml-2 text-xs font-normal text-fg-subtle">{formatPercent(item.shareBp)}%</span>
                       </span>
                       <span className="flex-none text-right">
@@ -205,7 +220,7 @@ export function BudgetPage() {
                           )}
                         </span>
                       </span>
-                    </div>
+                    </Link>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-raised" aria-hidden>
                       <div
                         className={`h-full rounded-full ${over ? 'bg-danger' : 'bg-accent'}`}

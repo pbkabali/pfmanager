@@ -56,7 +56,10 @@ export default defineConfig({
         // Not locked to portrait: on a desktop or tablet the dashboard wants
         // the width.
         orientation: 'any',
-        start_url: '/',
+        // The budget, not the dashboard: what is left and what that is per
+        // day is why this app gets opened. OpenOnBudget covers the platforms
+        // that restore the last URL instead of honouring this.
+        start_url: '/budget',
         icons: [
           // Same version query as the touch icon in index.html; bump together.
           { src: '/icons/icon-192.png?v=2', sizes: '192x192', type: 'image/png' },
