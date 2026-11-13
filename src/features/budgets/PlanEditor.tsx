@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 
 import { useUser } from '../../app/providers/useAuth'
 import { dangerButton } from '../../components/buttonStyles'
+import { useUnsavedWork } from '../../lib/hooks/useUnsavedWork'
 import { IconPicker } from '../categories/IconPicker'
 import { suggestIcon } from '../categories/icons'
 import { OUT_OF_BUDGET_CATEGORY_ID, type Category } from '../categories/types'
@@ -42,6 +43,8 @@ function selectAllOnFocus(event: React.FocusEvent<HTMLInputElement>) {
  */
 export function PlanEditor({ categories, onClose }: { categories: Category[]; onClose: () => void }) {
   const user = useUser()
+  // Unsaved input: nothing may navigate away from it on its own.
+  useUnsavedWork()
   const items = useMemo(
     () =>
       categories
